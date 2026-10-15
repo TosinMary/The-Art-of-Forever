@@ -117,7 +117,7 @@ a { color: inherit; }
 .hero-photo {
   position: relative;
   margin: 0;
-  aspect-ratio: 7 / 12;          /* change to 1 / 1 or 3 / 4 if you prefer */
+  aspect-ratio: 7 / 11;          /* change to 1 / 1 or 3 / 4 if you prefer */
   overflow: hidden;
   border-radius: var(--radius);
 }
