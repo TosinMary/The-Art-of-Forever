@@ -264,3 +264,59 @@ document.querySelectorAll(".copy-btn").forEach((btn) => {
     }
   });
 });
+
+
+/* ---------- Hero carousel (homepage) ---------- */
+const heroCarousel = document.getElementById("hero-carousel");
+if (heroCarousel && sources.length > 1) {
+  heroCarousel.innerHTML = "";
+
+  // One <img> per photo, stacked on top of each other
+  const slides = sources.map((src, i) => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "Tosin and Raphael, photo " + (i + 1);
+    if (i === 0) img.classList.add("active");
+    else img.loading = "lazy";
+    heroCarousel.appendChild(img);
+    return img;
+  });
+
+  // Dots
+  const dotsWrap = document.createElement("div");
+  dotsWrap.className = "hero-dots";
+  const dots = sources.map((_, i) => {
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.setAttribute("aria-label", "Show photo " + (i + 1));
+    dot.addEventListener("click", () => { goTo(i); restart(); });
+    dotsWrap.appendChild(dot);
+    return dot;
+  });
+  heroCarousel.appendChild(dotsWrap);
+
+  let index = 0;
+  let timer = null;
+
+  function goTo(i) {
+    slides[index].classList.remove("active");
+    dots[index].classList.remove("active");
+    index = (i + slides.length) % slides.length;
+    slides[index].classList.add("active");
+    dots[index].classList.add("active");
+  }
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function start() {
+    if (!reduceMotion) timer = setInterval(() => goTo(index + 1), 4000);
+  }
+  function stop() { clearInterval(timer); }
+  function restart() { stop(); start(); }
+
+  // Pause while the mouse is over the photo
+  heroCarousel.addEventListener("mouseenter", stop);
+  heroCarousel.addEventListener("mouseleave", start);
+
+  dots[0].classList.add("active");
+  start();
+}
