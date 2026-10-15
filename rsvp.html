@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RSVP | The Art of Forever</title>
+  <meta name="description" content="Confirm your attendance at the wedding of Gift and Victory." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="rsvp.html">
+
+  <header class="site-header" id="top">
+    <a href="index.html" class="brand">The Art of Forever</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav">
+      <span></span><span></span><span></span>
+    </button>
+    <nav id="nav" class="nav">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="story.html">Our Story</a></li>
+        <li><a href="gallery.html">Gallery</a></li>
+        <li><a href="rsvp.html" class="active">RSVP</a></li>
+        <li><a href="location.html">Location</a></li>
+        <li><a href="gift.html" class="nav-gift">Gift the Couple</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <p class="hashtag">#ArtFullyTee</p>
+      <h1>RSVP</h1>
+      <p class="lead">Confirm your attendance and receive a personal QR pass for entry. Saturday, 5 December 2026.</p>
+    </section>
+
+    <section class="form-wrap">
+      <form id="rsvp-form" class="form" novalidate>
+        <div class="field">
+          <label for="name">Full name</label>
+          <input id="name" name="name" type="text" autocomplete="name" required />
+          <small class="error" data-for="name"></small>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required />
+            <small class="error" data-for="email"></small>
+          </div>
+          <div class="field">
+            <label for="phone">Phone number</label>
+            <input id="phone" name="phone" type="tel" autocomplete="tel" />
+            <small class="error" data-for="phone"></small>
+          </div>
+        </div>
+
+        <fieldset class="field">
+          <legend>Will you attend?</legend>
+          <label class="choice"><input type="radio" name="attending" value="yes" checked /> Yes, I will be there</label>
+          <label class="choice"><input type="radio" name="attending" value="no" /> Sorry, I can't make it</label>
+        </fieldset>
+
+        <div class="field" id="guests-field">
+          <label for="guests">Number of guests (including you)</label>
+          <select id="guests" name="guests">
+            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="message">Message to the couple (optional)</label>
+          <textarea id="message" name="message" rows="4"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Confirm my seat</button>
+        <p class="form-status" id="form-status" role="status"></p>
+      </form>
+
+      <div class="pass" id="pass" hidden>
+        <p class="hashtag">#ArtFullyTee</p>
+        <h2>You're confirmed</h2>
+        <p class="pass-name" id="pass-name"></p>
+        <p class="pass-meta" id="pass-meta"></p>
+        <div id="qrcode" class="qrcode" aria-label="Your personal QR pass"></div>
+        <p class="pass-id" id="pass-id"></p>
+        <p class="pass-note">Show this QR code at the entrance. Save or screenshot it now.</p>
+        <div class="cta-row center">
+          <button type="button" class="btn btn-primary" id="download-pass">Download pass</button>
+          <button type="button" class="btn btn-outline" id="new-rsvp">Add another guest</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-names">Tosin &amp; Raphael</p>
+    <p>#ArtFullyTee &middot; With love, forever</p>
+    <p class="copyright">&copy; 2026 The Art of Forever</p>
+  </footer>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="pages.js"></script>
+</body>
+</html>

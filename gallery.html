@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gallery | The Art of Forever</title>
+  <meta name="description" content="Photos of Gift and Victory." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="gallery.html">
+
+  <header class="site-header" id="top">
+    <a href="index.html" class="brand">The Art of Forever</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav">
+      <span></span><span></span><span></span>
+    </button>
+    <nav id="nav" class="nav">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="story.html">Our Story</a></li>
+        <li><a href="gallery.html" class="active">Gallery</a></li>
+        <li><a href="rsvp.html">RSVP</a></li>
+        <li><a href="location.html">Location</a></li>
+        <li><a href="gift.html" class="nav-gift">Gift the Couple</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <p class="hashtag">#ArtFullyTee</p>
+      <h1>Gallery</h1>
+      <p class="lead">Moments from Tosin &amp; Raphael's journey. Tap a photo to view it larger.</p>
+    </section>
+
+    <section class="gallery-page">
+      <div class="photo-grid" id="photo-grid"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-names">Tosin &amp; Raphael</p>
+    <p>#ArtFullyTee &middot; With love, forever</p>
+    <p class="copyright">&copy; 2026 The Art of Forever</p>
+  </footer>
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lightbox-close" aria-label="Close image">&times;</button>
+    <button class="lightbox-nav prev" aria-label="Previous photo">&#8249;</button>
+    <img src="" alt="Wedding gallery photo" />
+    <button class="lightbox-nav next" aria-label="Next photo">&#8250;</button>
+  </div>
+  <script src="pages.js"></script>
+</body>
+</html>

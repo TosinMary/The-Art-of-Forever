@@ -1,0 +1,1057 @@
+/* ==========================================================================
+   PERFECT LOVE WEDDING - style.css
+   Gift & Victory | #PerfectLove26
+
+   One stylesheet shared by every page:
+   index.html, story.html, gallery.html, rsvp.html, location.html, gift.html
+
+   HOW THIS FILE IS ORGANISED
+   --------------------------
+    1. Design tokens (colours, fonts, sizes)  <- change the look from here
+    2. Reset and base styles
+    3. Utilities (small helpers used on many pages)
+    4. Header and navigation (all pages)
+    5. Buttons and links (all pages)
+    6. Home page: hero and countdown
+    7. Home page: scrolling gallery strip
+    8. Info cards (home page and gift page)
+    9. Inner page heading (story, gallery, rsvp, location, gift)
+   10. Our Story page: timeline
+   11. Gallery page: photo grid
+   12. Lightbox (photo viewer, home and gallery)
+   13. RSVP page: form and QR pass
+   14. Location page: venues and maps
+   15. Gift page: payment cards
+   16. Footer (all pages)
+   17. Responsive rules (tablet and phone)
+   18. Accessibility: reduced motion
+   19. Final overrides
+
+   TIP: In VS Code press Ctrl+F (Cmd+F on Mac) and search for the section
+   number or name, for example "13." or "RSVP", to jump straight to it.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1. DESIGN TOKENS
+   Custom properties (CSS variables) used throughout the file.
+   Change a value here and it updates on every page.
+   ========================================================================== */
+:root {
+  /* ----- Colours ----- */
+  --ivory: #fbf7f2;          /* page background, a soft warm white            */
+  --blush: #efe6d8;     /* gallery strip, hover backgrounds              */
+  --rose: #6d1f2f;       /* main accent: buttons, focus rings             */
+  --rose-dark: #4a1420;  /* darker accent: links, button hover            */
+  --ink: #2a1f22;            /* main text colour                              */
+  --muted: #6b6165;          /* secondary text                                */
+  --white: #ffffff;          /* card and form backgrounds                     */
+  --error: #c0392b;          /* form validation messages                      */
+  --gold: #6b6b2f;          /* small touches: hashtag, active link underline */
+ 
+  /* A faint dark line used for borders and dividers (8% of --ink) */
+  --line: rgba(42, 31, 34, 0.08);
+  /* A slightly stronger line for dividers that need to be seen */
+  --line-strong: rgba(42, 31, 34, 0.12);
+
+  /* ----- Fonts (loaded from Google Fonts in each page's <head>) ----- */
+  --font-display: "Cormorant Garamond", Georgia, serif;  /* headings */
+  --font-body: "Jost", system-ui, sans-serif;            /* body text */
+
+  /* ----- Shape and layout ----- */
+  --radius: 14px;            /* rounded corners on cards, images, forms */
+  --max: 1180px;             /* widest a content area is allowed to be  */
+  --gutter: clamp(1rem, 4vw, 3rem);  /* side padding: grows with screen */
+}
+
+
+/* ==========================================================================
+   2. RESET AND BASE STYLES
+   Removes browser inconsistencies and sets sensible defaults.
+   ========================================================================== */
+
+/* Make width/height include padding and border. This is far easier to
+   reason about than the browser default. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Smooth scrolling when a link jumps to a section on the same page */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;                          /* remove default browser margin */
+  font-family: var(--font-body);
+  font-weight: 300;                   /* light weight for an elegant feel */
+  line-height: 1.65;                  /* comfortable reading spacing */
+  color: var(--ink);
+  background: var(--ivory);
+}
+
+/* Images never overflow their container and sit on their own line */
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* Links inherit the surrounding text colour unless a rule below changes it */
+a {
+  color: inherit;
+}
+
+/* Headings share one style. Individual pages override the size where needed. */
+h2 {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);  /* scales with screen width */
+}
+
+/* Visible keyboard focus ring for anyone navigating with the Tab key.
+   Do not remove this, it matters for accessibility. */
+:focus-visible {
+  outline: 2px solid var(--rose);
+  outline-offset: 3px;
+}
+
+
+/* ==========================================================================
+   3. UTILITIES
+   Tiny single-purpose helpers.
+   ========================================================================== */
+
+/* Centre a row of buttons (used with .cta-row) */
+.center {
+  justify-content: center;
+}
+
+/* Emphasised line of text inside a card, e.g. a date or venue name */
+.strong {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+
+/* ==========================================================================
+   4. HEADER AND NAVIGATION
+   Sticky bar at the top of every page. On phones the links collapse
+   behind a hamburger button (see section 17 for the phone layout).
+   ========================================================================== */
+
+.site-header {
+  position: sticky;                 /* stays visible while scrolling */
+  top: 0;
+  z-index: 50;                      /* sits above page content */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;   /* brand left, nav right */
+  padding: 1rem var(--gutter);
+  background: rgba(251, 247, 242, 0.92);  /* ivory, slightly see-through */
+  backdrop-filter: blur(8px);             /* frosted-glass effect */
+  border-bottom: 1px solid var(--line);
+}
+
+/* "Perfect Love" logo text */
+.brand {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  font-style: italic;
+  text-decoration: none;
+  color: var(--rose-dark);
+}
+
+/* ----- Navigation list ----- */
+.nav ul {
+  display: flex;
+  align-items: center;
+  gap: 1.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;                 /* remove bullet points */
+}
+
+.nav a {
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+
+.nav a:hover {
+  color: var(--ink);
+}
+
+/* The link for the page you are currently on (class="active" in the HTML) */
+.nav a.active {
+  color: var(--ink);
+  border-bottom: 1px solid var(--gold);
+  padding-bottom: 2px;
+}
+
+/* "Gift the Couple" is styled as a filled pill so it stands out */
+.nav .nav-gift {
+  padding: 0.45rem 1.1rem;
+  color: var(--white);
+  background: var(--rose);
+  border-radius: 999px;             /* 999px = fully rounded ends */
+}
+
+.nav .nav-gift:hover {
+  color: var(--white);
+  background: var(--rose-dark);
+}
+
+/* When the Gift page is open, keep the pill look. This beats the general
+   ".nav a.active" rule above, which would otherwise turn the text dark
+   and add an underline. */
+.nav .nav-gift.active {
+  color: var(--white);
+  border-bottom: 0;
+  padding-bottom: 0.45rem;
+  background: var(--rose-dark);
+}
+
+/* ----- Hamburger button (hidden on desktop, shown on phones) ----- */
+.nav-toggle {
+  display: none;
+  padding: 0.5rem;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* The three lines of the hamburger icon */
+.nav-toggle span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  margin: 5px 0;
+  background: var(--ink);
+  transition: transform 0.25s, opacity 0.25s;
+}
+
+/* When the menu is open (aria-expanded="true", set by JavaScript),
+   turn the three lines into an X. */
+.nav-toggle[aria-expanded="true"] span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.nav-toggle[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+.nav-toggle[aria-expanded="true"] span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+
+/* ==========================================================================
+   5. BUTTONS AND LINKS
+   Used on every page.
+   ========================================================================== */
+
+/* Base button. Works on both <a class="btn"> and <button class="btn">. */
+.btn {
+  display: inline-block;
+  padding: 0.85rem 1.6rem;
+  font-family: inherit;             /* <button> ignores page fonts otherwise */
+  font-size: 1rem;
+  font-weight: 400;
+  text-decoration: none;            /* removes underline on <a> buttons */
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+/* Filled button: the main action on a page */
+.btn-primary {
+  color: var(--white);
+  background: var(--rose);
+}
+.btn-primary:hover {
+  background: var(--rose-dark);
+}
+
+/* Outlined button: a secondary action */
+.btn-outline {
+  color: var(--rose-dark);
+  background: transparent;
+  border: 1px solid var(--rose);
+}
+.btn-outline:hover {
+  background: var(--blush);
+}
+
+/* Row of buttons that wraps onto a new line on small screens */
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin: 1.8rem 0 1rem;
+}
+
+/* Underlined text link, e.g. "Read Our Story", "View all" */
+.text-link {
+  font-weight: 400;
+  color: var(--rose-dark);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;  /* underline in the text colour */
+}
+.text-link:hover {
+  color: var(--ink);
+}
+
+
+/* ==========================================================================
+   6. HOME PAGE: HERO AND COUNTDOWN
+   Two columns on desktop: text on the left, arched photo on the right.
+   ========================================================================== */
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;      /* text column slightly wider */
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: center;
+  max-width: var(--max);
+  margin: 0 auto;                          /* centre the whole section */
+  padding: clamp(2.5rem, 7vw, 6rem) var(--gutter);
+}
+
+/* "#PerfectLove26" small gold text (also used on inner pages) */
+.hashtag {
+  margin: 0 0 0.5rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+
+/* Big "Gift & Victory" headline */
+.hero h1 {
+  margin: 0 0 1rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(3.5rem, 10vw, 7rem);    /* min, preferred, max size */
+  line-height: 0.95;
+  color: var(--ink);
+}
+
+/* The ampersand in the headline: italic and rose coloured */
+.hero h1 .amp {
+  margin: 0 0.12em;
+  font-style: italic;
+  color: var(--rose);
+}
+
+/* Intro paragraph under the headline (also used on inner pages) */
+.lead {
+  max-width: 46ch;                         /* keeps line length readable */
+  font-size: 1.15rem;
+  color: var(--muted);
+}
+
+/* ----- Countdown timer (numbers are filled in by script.js) ----- */
+.countdown {
+  display: flex;
+  gap: 1.6rem;
+  margin-top: 2.4rem;
+}
+
+.countdown div {
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+/* The big number */
+.countdown strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* The small label: days, hours, minutes, seconds */
+.countdown span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ----- Hero photo ----- */
+.hero-photo {
+  margin: 0;                               /* <figure> has default margins */
+}
+
+.hero-photo img {
+  width: 100%;
+  aspect-ratio: 4 / 5;                     /* portrait shape */
+  object-fit: cover;                       /* crop to fill, never stretch */
+  /* Rounded top corners make an "arch" window shape.
+     Order is: top-left, top-right, bottom-right, bottom-left. */
+  border-radius: 200px 200px var(--radius) var(--radius);
+  box-shadow: 0 20px 50px rgba(143, 60, 72, 0.18);
+}
+
+
+/* ==========================================================================
+   7. HOME PAGE: SCROLLING GALLERY STRIP
+   A row of photos that slowly scrolls sideways. script.js adds the photos
+   twice so the loop looks seamless.
+   ========================================================================== */
+
+.gallery {
+  padding: 3rem 0;
+  background: var(--blush);
+  overflow: hidden;                        /* hide the parts that scroll off */
+}
+
+/* Heading row: "Gallery" on the left, "View all" on the right.
+   Also reused by other sections that need a title with a link. */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  max-width: var(--max);
+  margin: 0 auto 1.5rem;
+  padding: 0 var(--gutter);
+}
+
+.marquee {
+  overflow: hidden;
+}
+
+/* The long moving strip. width: max-content lets it be as wide as all its
+   photos, and the animation slides it left by exactly half its width
+   (one full set of photos), then repeats. */
+.marquee-track {
+  display: flex;
+  gap: 1rem;
+  width: max-content;
+  animation: scroll 45s linear infinite;   /* 45s per loop: lower = faster */
+}
+
+/* Pause the movement while someone hovers, so they can click a photo */
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* Each photo is wrapped in a <button> so it works with the keyboard */
+.marquee-track button {
+  flex: 0 0 auto;                          /* never shrink or stretch */
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: zoom-in;                         /* magnifier cursor hints "click" */
+}
+
+.marquee-track img {
+  height: 300px;
+  width: auto;                             /* keep each photo's proportions */
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+/* Slide the strip left by half of its width */
+@keyframes scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+
+/* ==========================================================================
+   8. INFO CARDS
+   Used for Our Story / When / Where / RSVP on the home page, and for the
+   payment cards on the gift page.
+   ========================================================================== */
+
+/* Responsive grid: as many 240px-minimum columns as fit, sharing the space */
+.info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.2rem;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 4rem var(--gutter);
+}
+
+.card {
+  padding: 1.8rem;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.card p {
+  margin: 0 0 0.6rem;
+  color: var(--muted);
+}
+
+/* Highlighted line inside a card (a date or venue name) */
+.card .strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.card .text-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+
+/* ==========================================================================
+   9. INNER PAGE HEADING
+   The centred title block at the top of Story, Gallery, RSVP, Location
+   and Gift pages.
+   ========================================================================== */
+
+.page-hero {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(2.5rem, 6vw, 5rem) 1.2rem 2rem;
+  text-align: center;
+}
+
+.page-hero h1 {
+  margin: 0 0 0.8rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.8rem, 8vw, 5rem);
+  line-height: 1;
+}
+
+/* Centre the intro paragraph (it has a max-width set in section 6) */
+.page-hero .lead {
+  margin: 0 auto;
+}
+
+
+/* ==========================================================================
+   10. OUR STORY PAGE: TIMELINE
+   Each chapter has a label on the left and the story on the right.
+   On phones the two stack vertically (see section 17).
+   ========================================================================== */
+
+.timeline {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 1rem 1.2rem 4rem;
+}
+
+.chapter {
+  display: grid;
+  grid-template-columns: 170px 1fr;        /* fixed label, flexible text */
+  gap: 1.8rem;
+  padding: 2rem 0;
+  border-top: 1px solid var(--line-strong);  /* divider between chapters */
+}
+
+/* The label on the left, e.g. "Courtship" or "21 November 2026" */
+.chapter-year {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-style: italic;
+  color: var(--rose-dark);
+}
+
+.chapter-body h2 {
+  margin-bottom: 0.4rem;
+}
+
+.chapter-body p {
+  max-width: 56ch;
+  margin: 0 0 1rem;
+  color: var(--muted);
+}
+
+
+/* ==========================================================================
+   11. GALLERY PAGE: PHOTO GRID
+   Uses CSS columns for a "masonry" layout: photos keep their natural
+   heights and flow down each column.
+   ========================================================================== */
+
+.gallery-page {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1rem var(--gutter) 4rem;
+}
+
+/* "3 260px" means: up to 3 columns, each at least 260px wide */
+.photo-grid {
+  columns: 3 260px;
+  column-gap: 1rem;
+}
+
+/* Each photo is a <button> (keyboard accessible) */
+.photo-grid button {
+  display: block;
+  width: 100%;
+  margin: 0 0 1rem;                        /* space between rows */
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: zoom-in;
+  break-inside: avoid;                     /* never split a photo across columns */
+}
+
+.photo-grid img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  transition: transform 0.25s;
+}
+
+/* Gentle zoom when hovering a photo */
+.photo-grid button:hover img {
+  transform: scale(1.015);
+}
+
+
+/* ==========================================================================
+   12. LIGHTBOX (PHOTO VIEWER)
+   Full-screen dark overlay that shows one photo large.
+   Used on the home page (close button only) and the gallery page
+   (close + previous/next buttons).
+   ========================================================================== */
+
+.lightbox {
+  position: fixed;
+  inset: 0;                                /* shorthand for top/right/bottom/left: 0 */
+  z-index: 100;                            /* above the sticky header (50) */
+  display: grid;
+  place-items: center;                     /* centre the photo */
+  padding: 1.5rem;
+  background: rgba(20, 14, 16, 0.9);       /* near-black, slightly see-through */
+}
+
+.lightbox img {
+  max-width: 100%;
+  max-height: 90vh;                        /* never taller than the screen */
+  border-radius: var(--radius);
+}
+
+/* The big "x" in the top-right corner */
+.lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.4rem;
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--white);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* Previous and next arrow buttons (gallery page only) */
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);             /* centre vertically */
+  width: 48px;
+  height: 48px;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.12);
+  border: 0;
+  border-radius: 50%;                      /* circle */
+  cursor: pointer;
+}
+
+.lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.lightbox-nav.prev {
+  left: 1rem;
+}
+
+.lightbox-nav.next {
+  right: 1rem;
+}
+
+
+/* ==========================================================================
+   13. RSVP PAGE: FORM AND QR PASS
+   The form is shown first. After a successful RSVP, pages.js hides the form
+   and shows the pass (the box with the QR code).
+   ========================================================================== */
+
+.form-wrap {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem 1.2rem 5rem;
+}
+
+/* ----- The form card ----- */
+.form {
+  padding: clamp(1.4rem, 4vw, 2.2rem);
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* One labelled input. Also used on <fieldset> (the yes/no choice), so the
+   browser's default fieldset border and padding are removed. */
+.field {
+  margin: 0 0 1.2rem;
+  padding: 0;
+  border: 0;
+}
+
+/* Two fields side by side (email + phone). Stacks on phones. */
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.field label,
+.field legend {
+  display: block;
+  margin-bottom: 0.4rem;
+  padding: 0;
+  font-weight: 400;
+}
+
+/* All text inputs, dropdown and message box share one look */
+.field input[type="text"],
+.field input[type="email"],
+.field input[type="tel"],
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  font: inherit;                           /* match the page font */
+  color: var(--ink);
+  background: var(--ivory);
+  border: 1px solid rgba(43, 34, 38, 0.2);
+  border-radius: 10px;
+}
+
+/* Highlight the field the person is typing in */
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: transparent;
+  outline: 2px solid var(--rose);
+}
+
+/* Red border added by pages.js when a field fails validation */
+.field .invalid {
+  border-color: var(--error);
+}
+
+/* Yes / No radio options */
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.3rem 0;
+  cursor: pointer;
+}
+
+/* Error message under a field. min-height reserves space so the form does
+   not jump when a message appears. */
+.error {
+  display: block;
+  min-height: 1.1em;
+  margin-top: 0.3rem;
+  color: var(--error);
+}
+
+/* "Sending..." or failure message under the submit button */
+.form-status {
+  margin: 1rem 0 0;
+  color: var(--muted);
+}
+
+/* ----- The confirmed pass (shown after RSVP) ----- */
+.pass {
+  padding: 2.2rem 1.4rem;
+  text-align: center;
+  background: var(--white);
+  border: 1px dashed var(--gold);          /* dashed edge looks like a ticket */
+  border-radius: var(--radius);
+}
+
+.pass-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+}
+
+.pass-meta,
+.pass-note {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+}
+
+/* Guest ID, e.g. PLW26-K7M2QX */
+.pass-id {
+  margin: 0.8rem 0 0.3rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+/* White padded frame around the QR code so phones can scan it easily */
+.qrcode {
+  display: inline-block;
+  margin: 1.4rem 0 0.4rem;
+  padding: 12px;
+  background: var(--white);
+}
+
+
+/* ==========================================================================
+   14. LOCATION PAGE: VENUES AND MAPS
+   Each venue is a card: details on the left, Google Map on the right.
+   ========================================================================== */
+
+.venues {
+  display: grid;
+  gap: 1.5rem;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1rem var(--gutter) 2rem;
+}
+
+.venue {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;        /* map gets a bit more room */
+  gap: 1.5rem;
+  align-items: stretch;                    /* both columns same height */
+  overflow: hidden;                        /* clip map to the rounded corners */
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.venue-info {
+  padding: 2rem;
+}
+
+.venue-info p {
+  margin: 0 0 0.6rem;
+  color: var(--muted);
+}
+
+/* The "Ceremony - 12:00 PM" line is darker than the rest */
+.venue-info .strong {
+  color: var(--ink);
+}
+
+.venue-info .btn {
+  margin-top: 0.8rem;
+}
+
+/* The embedded Google Map */
+.map {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  border: 0;                               /* remove default iframe border */
+}
+
+/* "Good to know" note under the venues. Also used at the bottom of the
+   Gift page. */
+.notes {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1rem 1.2rem 4rem;
+  text-align: center;
+}
+
+.notes p {
+  color: var(--muted);
+}
+
+
+/* ==========================================================================
+   15. GIFT PAGE: PAYMENT CARDS
+   Reuses .card from section 8. These rules style the details inside.
+   ========================================================================== */
+
+.gift-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.2rem;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1rem var(--gutter) 2rem;
+}
+
+/* <dl> is a "description list": <dt> is the label, <dd> is the value */
+.gift-card dl {
+  margin: 0;
+}
+
+/* Small grey label, e.g. "Account number" */
+.gift-card dt {
+  margin-top: 0.8rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* The value, e.g. the account number itself */
+.gift-card dd {
+  margin: 0;
+  font-weight: 400;
+}
+
+/* Small pill-shaped "Copy" button next to a value */
+.copy-btn {
+  margin-left: 0.6rem;
+  padding: 0.2rem 0.7rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--rose-dark);
+  background: none;
+  border: 1px solid var(--rose);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  background: var(--blush);
+}
+
+
+/* ==========================================================================
+   16. FOOTER
+   Same on every page.
+   ========================================================================== */
+
+.site-footer {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--muted);
+  border-top: 1px solid var(--line-strong);
+}
+
+.site-footer p {
+  margin: 0.2rem 0;
+}
+
+/* "Gift & Victory" large text in the footer */
+.footer-names {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--ink);
+}
+
+.copyright {
+  font-size: 0.85rem;
+}
+
+
+/* ==========================================================================
+   17. RESPONSIVE RULES
+   Changes for smaller screens. Rules in a block only apply when the
+   screen is no wider than the stated size.
+   ========================================================================== */
+
+/* ----- Tablets and phones (860px and narrower) ----- */
+@media (max-width: 860px) {
+
+  /* Home hero: stack the text and photo in one column, photo first */
+  .hero {
+    grid-template-columns: 1fr;
+  }
+  .hero-photo {
+    order: -1;                             /* moves the photo above the text */
+    max-width: 420px;
+  }
+
+  /* Show the hamburger button and turn the nav into a dropdown panel */
+  .nav-toggle {
+    display: block;
+  }
+  .nav {
+    position: absolute;
+    top: 100%;                             /* directly under the header */
+    left: 0;
+    right: 0;
+    display: none;                         /* hidden until the button is tapped */
+    background: var(--ivory);
+    border-bottom: 1px solid var(--line-strong);
+  }
+  /* script.js adds the class "open" when the hamburger is tapped */
+  .nav.open {
+    display: block;
+  }
+  .nav ul {
+    flex-direction: column;                /* stack links vertically */
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.2rem var(--gutter);
+  }
+
+  /* Smaller photos in the home gallery strip */
+  .marquee-track img {
+    height: 220px;
+  }
+
+  /* Story: put each chapter's label above its text */
+  .chapter {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  /* Location: put the map under the venue details */
+  .venue {
+    grid-template-columns: 1fr;
+  }
+  .map {
+    min-height: 260px;
+  }
+}
+
+/* ----- Small phones (520px and narrower) ----- */
+@media (max-width: 520px) {
+  /* RSVP: email and phone stack instead of sitting side by side */
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ==========================================================================
+   18. ACCESSIBILITY: REDUCED MOTION
+   Some people get dizzy from moving content and turn on "reduce motion"
+   in their device settings. This respects that choice.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;                 /* no smooth scrolling */
+  }
+
+  /* Stop the home gallery strip from moving. Let the person scroll it
+     sideways by hand instead. */
+  .marquee {
+    overflow-x: auto;
+  }
+  .marquee-track {
+    animation: none;
+  }
+}
+
+
+/* ==========================================================================
+   19. FINAL OVERRIDES
+   Keep this at the very end of the file.
+   ========================================================================== */
+
+/* The HTML "hidden" attribute is used by script.js to show or hide things
+   (lightbox, QR pass, form). Some rules above set "display" on those same
+   elements, which would stop hiding from working. This line guarantees
+   that hidden always wins. */
+[hidden] {
+  display: none !important;
+}
