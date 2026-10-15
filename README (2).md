@@ -1,13 +1,10 @@
-# Perfect Love Wedding Website
+# The Art of Forever
 
-A six-page wedding website for **Gift & Victory** (#PerfectLove26), built with plain HTML, CSS and JavaScript. No frameworks, installs or build tools are needed.
+A six-page wedding website for **Tosin & Raphael** (#ArtFullyTee), built with plain HTML, CSS and JavaScript. No frameworks, installs or build tools are needed.
 
-> **Note:** This is a rebuild of https://perfectlove26.netlify.app/, not a copy of its original source code. The text, structure and images follow the live site, but the design is new and fully editable. The story text and gift details are **placeholders** that you must replace with your own.
-
+> **Note:** This is a build of https://artfullytee-tosinraphael.netlify.app/
 **Wedding details used in this project**
-- Date: Saturday, 21 November 2026
-- Ceremony: 12:00 PM at RCCG Goodnews Zonal Headquarters, Ibadan
-- Reception: 2:00 PM at LCU Conference Centre, Ibadan
+- Date: Saturday, 5 December 2026
 
 ---
 
@@ -185,7 +182,7 @@ const GALLERY_IMAGES = [
 4. In `index.html`, update the hero photo:
 
 ```html
-<img src="images/20251122_123807.jpg" alt="Gift and Victory" />
+<img src="images/20251122_123807.jpg" alt="Tosin and Raphael" />
 ```
 
 Rename downloaded files carefully. File names are case-sensitive once the site is online.
@@ -196,7 +193,7 @@ Rename downloaded files carefully. File names are case-sensitive once the site i
 
 Because this is a static site, you can host it for free:
 
-- **Netlify:** go to https://app.netlify.com/drop and drag the `perfect-love` folder onto the page
+- **Netlify:** go to https://app.netlify.com/drop and drag the `The Art of Forever` folder onto the page
 - **GitHub Pages:** push the folder to a GitHub repository, then enable Pages in the repository settings
 - **Vercel:** import the project and deploy with the default settings
 
@@ -231,4 +228,4 @@ After publishing, open every page on your phone and test the RSVP form, the maps
 
 ---
 
-&copy; 2026 Perfect Love Wedding
+&copy; 2026 The Art of Forever
