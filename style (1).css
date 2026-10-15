@@ -605,6 +605,16 @@ h2 {
 @media (max-width: 520px) {
   .field-row { grid-template-columns: 1fr; }
 }
+.hero {
+    grid-template-columns: 1fr;
+  }
+
+  /* Hide the hero photo on mobile */
+  .hero-photo {
+    display: none;
+  }
+
 
 /* Make the hidden attribute always win over display rules */
 [hidden] { display: none !important; }
+
