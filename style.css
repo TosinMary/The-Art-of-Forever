@@ -427,33 +427,40 @@ h2 {
 /* The long moving strip. width: max-content lets it be as wide as all its
    photos, and the animation slides it left by exactly half its width
    (one full set of photos), then repeats. */
-.marquee-track {
+ .marquee-track {
   display: flex;
-  gap: 1rem;
   width: max-content;
-  animation: scroll 45s linear infinite;   /* 45s per loop: lower = faster */
+  animation: scroll 80s linear infinite;   /* longer because there are more photos now */
 }
 
-/* Pause the movement while someone hovers, so they can click a photo */
 .marquee:hover .marquee-track {
   animation-play-state: paused;
 }
 
-/* Each photo is wrapped in a <button> so it works with the keyboard */
+/* Fixed-size frame: width no longer depends on the image loading.
+   margin-right (not gap) keeps the -50% loop perfectly seamless. */
 .marquee-track button {
-  flex: 0 0 auto;                          /* never shrink or stretch */
+  flex: 0 0 auto;
+  width: 240px;
+  height: 300px;
+  margin-right: 1rem;
   padding: 0;
   background: none;
   border: 0;
-  cursor: zoom-in;                         /* magnifier cursor hints "click" */
+  cursor: zoom-in;
 }
 
 .marquee-track img {
-  height: 300px;
-  width: auto;                             /* keep each photo's proportions */
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   border-radius: var(--radius);
 }
+
+  .marquee-track button {
+    width: 170px;
+    height: 220px;
+  }
 
 /* Slide the strip left by half of its width */
 @keyframes scroll {

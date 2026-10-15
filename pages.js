@@ -105,7 +105,7 @@ if (lightbox) {
 }
 
 /* ---------- Helper: build one clickable photo ---------- */
-function makePhotoButton(src, index) {
+function makePhotoButton(src, index, lazy = true) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.setAttribute("aria-label", "Open photo " + (index + 1));
@@ -113,7 +113,7 @@ function makePhotoButton(src, index) {
   const img = document.createElement("img");
   img.src = src;
   img.alt = "Wedding gallery photo";
-  img.loading = "lazy";
+  if (lazy) img.loading = "lazy";
 
   btn.appendChild(img);
   btn.addEventListener("click", () => openLightbox(index));
@@ -123,9 +123,9 @@ function makePhotoButton(src, index) {
 /* ---------- Gallery marquee (only if the page has one) ---------- */
 const track = document.getElementById("gallery-track");
 if (track) {
-  // Render the list twice so the scrolling loop is seamless
-  [...sources, ...sources].forEach((src, i) => {
-    track.appendChild(makePhotoButton(src, i % sources.length));
+  const half = [...sources, ...sources];      // 14 photos: wide enough for big screens
+  [...half, ...half].forEach((src, i) => {    // two identical halves = seamless loop
+    track.appendChild(makePhotoButton(src, i % sources.length, false));
   });
 }
 
