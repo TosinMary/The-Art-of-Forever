@@ -3,7 +3,7 @@
 Wedding website with **seat booking, emailed access cards, an admin dashboard with Excel export, and a QR check-in scanner** for the day.
 
 - **Date:** Saturday, 5 December 2026, Ceremony 10:00 AM
-- **Venue:** KBK Event Center, off Akala Express, New Garage, Ibadan
+- **Venue:**Ibadan
 - **Live site:** https://artfullytee-tosinraphael.netlify.app
 
 ---
