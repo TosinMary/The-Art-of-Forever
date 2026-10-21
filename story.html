@@ -4,11 +4,68 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Our Story | The Art of Forever</title>
-  <meta name="description" content="Discover how Gift Oladipo Gureje and Victory Ngozichukwu Elikwu met and fell in love." />
+  <meta name="description" content="How Tosin and Raphael met: from a walk to the gate to a lifetime together." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .story { max-width: 720px; margin: 0 auto; padding: 0 var(--gutter) 5rem; }
+
+    /* Opening question */
+    .story-open { position: relative; text-align: center; padding: 2.5rem 0 1rem; }
+    .story-open::before {
+      content: "\201C"; position: absolute; top: -1.2rem; left: 50%; transform: translateX(-50%);
+      font-family: var(--font-display); font-size: 8rem; line-height: 1; color: var(--gold); opacity: .35;
+    }
+    .story-open p {
+      position: relative; margin: 0 auto; max-width: 30ch;
+      font-family: var(--font-display); font-style: italic; font-weight: 500;
+      font-size: clamp(1.9rem, 5vw, 2.9rem); line-height: 1.25; color: var(--rose-dark);
+    }
+    .story-open small { display: block; margin-top: 1.2rem; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; font-size: .75rem; }
+
+    /* Ornament divider */
+    .orn { text-align: center; color: var(--gold); font-size: 1.3rem; letter-spacing: .7em; margin: 2.6rem 0; padding-left: .7em; }
+
+    /* Story parts */
+    .part-label {
+      display: block; text-align: center; margin-bottom: 1.2rem;
+      font-size: .75rem; letter-spacing: .32em; text-transform: uppercase; color: var(--gold); font-weight: 400;
+    }
+    .part p { margin: 0 0 1.4rem; font-size: 1.13rem; line-height: 1.95; color: var(--ink); opacity: .9; }
+    .part p:last-child { margin-bottom: 0; }
+    .part.first p:first-of-type::first-letter {
+      float: left; padding: .35rem .7rem 0 0;
+      font-family: var(--font-display); font-size: 4.6rem; line-height: .75; color: var(--rose-dark); font-weight: 500;
+    }
+
+    /* From ... to ... */
+    .crossing {
+      margin: 2.8rem 0; padding: 2.2rem 1.4rem; text-align: center;
+      border-top: 1px solid var(--gold); border-bottom: 1px solid var(--gold);
+      background: linear-gradient(var(--blush), var(--blush)) center / 100% 100% no-repeat;
+    }
+    .crossing .from-to { font-size: .75rem; letter-spacing: .3em; text-transform: uppercase; color: var(--gold); margin: 0; }
+    .crossing .q {
+      margin: .6rem auto; max-width: 26ch;
+      font-family: var(--font-display); font-style: italic; font-weight: 500;
+      font-size: clamp(1.5rem, 4vw, 2.1rem); line-height: 1.3; color: var(--rose-dark);
+    }
+    .crossing .arrow { color: var(--gold); font-size: 1.2rem; margin: .2rem 0; }
+
+    /* Ending */
+    .story-end { text-align: center; margin-top: 3rem; }
+    .story-end .sign {
+      margin: 2rem 0 .2rem; font-family: var(--font-display); font-size: 2.2rem; font-weight: 500; color: var(--ink);
+    }
+    .story-end .tag { margin: 0 0 2rem; font-family: var(--font-display); font-style: italic; font-size: 1.3rem; color: var(--rose-dark); }
+
+    /* Gentle fade-in (only when JavaScript is running) */
+    .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .9s ease, transform .9s ease; }
+    .js .reveal.in { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) { .js .reveal { opacity: 1; transform: none; transition: none; } }
+  </style>
 </head>
 <body data-page="story.html">
 
@@ -33,52 +90,72 @@
     <section class="page-hero">
       <p class="hashtag">#ArtFullyTee</p>
       <h1>Our Story</h1>
-      <p class="lead">How Tosin &amp; Raphael met, grew from friends to partners, and decided to spend forever together.</p>
+      <p class="lead">From a walk to forever.</p>
     </section>
 
-    <section class="timeline">
-      <!-- EDIT: replace the text in each block with your own story. Duplicate a <article class="chapter"> block to add more. -->
-      <article class="chapter">
-        <div class="chapter-year">Where it began</div>
-        <div class="chapter-body">
-          <h2>FUOYE - Lagos</h2>
-          <p>Tosin and Raphael met in Federal University Oye Ekiti. .....................</p>
-        </div>
-      </article>
+    <article class="story">
 
-      <article class="chapter">
-        <div class="chapter-year">Friendship</div>
-        <div class="chapter-body">
-          <h2>From strangers to friends</h2>
-          <p>Their friendship grew slowly and honestly....................</p>
-        </div>
-      </article>
+      <section class="story-open reveal">
+        <p>Can we walk together to the gate?</p>
+        <small>Where it all began</small>
+      </section>
 
-      <article class="chapter">
-        <div class="chapter-year">Courtship</div>
-        <div class="chapter-body">
-          <h2>When friendship became more</h2>
-          <p>Tell the story of when you both knew it was love....................</p>
-        </div>
-      </article>
+      <div class="orn" aria-hidden="true">&#10086;</div>
 
-      <article class="chapter">
-        <div class="chapter-year">The proposal</div>
-        <div class="chapter-body">
-          <h2>The question</h2>
-          <p>Share how the proposal happened..........................</p>
-        </div>
-      </article>
+      <section class="part first reveal">
+        <span class="part-label">The Question</span>
+        <p>Who would have thought that a simple question, <strong>&ldquo;Can we walk together to the gate?&rdquo;</strong> would become the beginning of a beautiful love story?</p>
+      </section>
 
-      <article class="chapter">
-        <div class="chapter-year">5 December 2026</div>
-        <div class="chapter-body">
-          <h2>The wedding</h2>
-          <p>Ceremony at 10:00 AM in Ibadan, Nigeria. We would love for you to celebrate with us.</p>
+      <div class="orn" aria-hidden="true">&#10086;</div>
+
+      <section class="part reveal">
+        <span class="part-label">The Walk</span>
+        <p>Our paths crossed in the university, where life brought two strangers together in the most ordinary yet extraordinary way.</p>
+        <p>What started as a simple walk to the gate soon became the beginning of conversations, laughter, friendship, and a bond that neither of us knew would one day mean so much.</p>
+      </section>
+
+      <div class="orn" aria-hidden="true">&#10086;</div>
+
+      <section class="part reveal">
+        <span class="part-label">Growing Closer</span>
+        <p>With every conversation, we grew closer. What began as friendship slowly blossomed into something deeper, something beautiful, and something worth holding on to.</p>
+        <p>Without even realising it, we were building a connection that would grow beyond the walls of the university and become a love we would cherish for a lifetime.</p>
+      </section>
+
+      <div class="orn" aria-hidden="true">&#10086;</div>
+
+      <section class="part reveal">
+        <span class="part-label">Looking Back</span>
+        <p>Looking back, it is amazing how one simple question became the opening chapter of our forever. A walk that could have ended at the gate became a journey that led us to each other, teaching us that sometimes, the most beautiful things in life begin with the smallest moments.</p>
+        <p>And now, here we are, ready to begin a new chapter, not just as two people who met by chance, but as two hearts who found friendship, discovered love, and chose a lifetime together.</p>
+      </section>
+
+      <section class="crossing reveal">
+        <p class="from-to">From</p>
+        <p class="q">&ldquo;Can we walk together to the gate?&rdquo;</p>
+        <p class="arrow" aria-hidden="true">&#8595;</p>
+        <p class="from-to">To</p>
+        <p class="q">&ldquo;Can we walk together through life, forever?&rdquo;</p>
+      </section>
+
+      <section class="part reveal">
+        <span class="part-label">Our Forever</span>
+        <p>Our journey began with a simple walk, but our destination has always been something beautiful: a lifetime of love, friendship, laughter, faith, and choosing each other, over and over again.</p>
+        <p>This is our story. This is our love. And this is the beginning of our forever. &#10084;&#65039;</p>
+      </section>
+
+      <section class="story-end reveal">
+        <div class="orn" aria-hidden="true">&#10086; &#10022; &#10086;</div>
+        <p class="sign">Tosin &amp; Raphael</p>
+        <p class="tag">ARTfullyTEE &mdash; From a Walk to Forever</p>
+        <div class="cta-row center">
           <a href="rsvp.html" class="btn btn-primary">RSVP &amp; Reserve Your Seat</a>
+          <a href="gallery.html" class="btn btn-outline">See Our Gallery</a>
         </div>
-      </article>
-    </section>
+      </section>
+
+    </article>
   </main>
 
   <footer class="site-footer">
@@ -88,5 +165,18 @@
   </footer>
 
   <script src="pages.js"></script>
+  <script>
+    // Fade each part in as it scrolls into view
+    document.documentElement.classList.add("js");
+    const items = document.querySelectorAll(".reveal");
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+      }, { threshold: 0.15 });
+      items.forEach((el) => io.observe(el));
+    } else {
+      items.forEach((el) => el.classList.add("in"));
+    }
+  </script>
 </body>
 </html>

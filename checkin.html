@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Usher Check-in</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:0;padding:16px;background:#fbf7f2;color:#2b2226;text-align:center}
+h1{margin:4px 0 12px;font-size:1.4rem}input,button{font:inherit;padding:10px 14px;border-radius:8px;border:1px solid #b5535f}
+button{background:#b5535f;color:#fff;cursor:pointer}#reader{max-width:360px;margin:12px auto;border-radius:12px;overflow:hidden}
+#res{max-width:420px;margin:14px auto;padding:20px;border-radius:14px;color:#fff;display:none}
+#res h2{margin:0 0 6px;font-size:2rem}#res p{margin:4px 0;font-size:1.1rem}.ok{background:#1f8a55}.bad{background:#c0392b}
+</style></head><body>
+<h1>Wedding Check-in</h1>
+<div id="login"><input id="k" type="password" placeholder="Usher key"> <button onclick="start()">Start scanner</button></div>
+<div id="reader"></div>
+<div id="res"></div>
+<p><input id="m" placeholder="Or type ref e.g. ART-ZMLPYY"> <button onclick="check(m.value)">Check</button></p>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+let busy=false,q;
+async function check(text){
+  const id=String(text).split("|")[0].trim();if(!id||busy)return;busy=true;
+  let d;try{const r=await fetch("/api/admin/checkin",{method:"POST",headers:{"x-admin-key":k.value,"content-type":"application/json"},body:JSON.stringify({id})});
+    d=r.status==401?{result:"invalid",reason:"Wrong usher key"}:await r.json()}catch(e){d={result:"invalid",reason:"No connection. Try again."}}
+  const ok=d.result=="valid",el=document.getElementById("res");
+  el.className=ok?"ok":"bad";el.style.display="block";
+  const who=d.name?`<p><b>${d.name}</b></p><p>${d.category}</p>`:"";
+  el.innerHTML=ok?`<h2>✔ VALID</h2>${who}<p>Table ${d.tables} · Seat ${d.seats}</p><p>Checked in ${d.at}</p>`
+    :d.result=="used"?`<h2>✖ ALREADY USED</h2>${who}<p>Table ${d.tables} · Seat ${d.seats}</p><p>First scanned ${d.at}</p>`
+    :`<h2>✖ INVALID</h2><p>${d.reason||"Card not recognised"}</p>${who}`;
+  if(navigator.vibrate)navigator.vibrate(ok?100:[200,100,200]);
+  setTimeout(()=>{busy=false},2500);
+}
+function start(){
+  if(!k.value)return alert("Enter the usher key");
+  login.style.display="none";q=new Html5Qrcode("reader");
+  q.start({facingMode:"environment"},{fps:10,qrbox:240},check).catch(()=>alert("Camera not available. Allow camera access, or type the ref below."));
+}
+</script></body></html>

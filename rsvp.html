@@ -4,103 +4,79 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RSVP | The Art of Forever</title>
-  <meta name="description" content="Confirm your attendance at the wedding of Gift and Victory." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .wrap{max-width:900px;margin:0 auto;padding:0 1.2rem 5rem}
+    .box{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:1.4rem;margin-bottom:1rem}
+    .box h2{font-size:1.5rem}.box label{display:block;margin:.8rem 0 .3rem}
+    .box input,.box select{width:100%;padding:.75rem .9rem;font:inherit;background:var(--ivory);border:1px solid var(--line-strong);color:var(--ink);border-radius:10px}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    .sides{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+    .sides button{padding:1rem;border:2px solid var(--line-strong);border-radius:12px;background:var(--white);color:var(--ink);font:inherit;cursor:pointer}
+    .sides button.on{border-color:var(--rose);background:var(--blush)}
+    .tables{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.8rem}
+    .tbl{border:1px solid var(--line-strong);border-radius:12px;padding:.8rem;text-align:center}
+    .tbl h3{margin:0;font-family:var(--font-display);font-size:1.3rem}.tbl small{color:var(--muted)}
+    .seats{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:.6rem}
+    .seat{width:34px;height:34px;border-radius:50%;border:2px solid var(--rose);background:var(--white);color:var(--ink);cursor:pointer;font:inherit;font-size:.8rem}
+    .seat.sel{background:var(--rose);color:#fff}
+    .seat:disabled{background:var(--line-strong);border-color:var(--line-strong);color:var(--muted);cursor:not-allowed}
+    .legend{display:flex;gap:1rem;font-size:.85rem;color:var(--muted);margin-bottom:.6rem}
+    .bar{position:sticky;bottom:10px;background:var(--white);border:1px solid var(--rose);border-radius:12px;padding:.8rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:.8rem;flex-wrap:wrap}
+    .err{color:#c0392b;margin:.6rem 0 0}
+    .acard{max-width:420px;margin:0 auto;text-align:center;background:var(--white);border:2px solid var(--gold);border-radius:var(--radius);padding:1.6rem}
+    .acard dl{text-align:left;margin:1rem 0}.acard dt{font-size:.8rem;color:var(--muted);margin-top:.5rem}.acard dd{margin:0;font-weight:500}
+    @media(max-width:520px){.two{grid-template-columns:1fr}}
+  </style>
 </head>
 <body data-page="rsvp.html">
-
   <header class="site-header" id="top">
     <a href="index.html" class="brand">The Art of Forever</a>
-    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav">
-      <span></span><span></span><span></span>
-    </button>
-    <nav id="nav" class="nav">
-      <ul>
-        <li><a href="index.html">Home</a></li>
-        <li><a href="story.html">Our Story</a></li>
-        <li><a href="gallery.html">Gallery</a></li>
-        <li><a href="rsvp.html" class="active">RSVP</a></li>
-        <li><a href="location.html">Location</a></li>
-        <li><a href="gift.html" class="nav-gift">Gift the Couple</a></li>
-      </ul>
-    </nav>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
+    <nav id="nav" class="nav"><ul>
+      <li><a href="index.html">Home</a></li><li><a href="story.html">Our Story</a></li><li><a href="gallery.html">Gallery</a></li>
+      <li><a href="rsvp.html" class="active">RSVP</a></li><li><a href="location.html">Location</a></li>
+      <li><a href="gift.html" class="nav-gift">Gift the Couple</a></li></ul></nav>
   </header>
 
   <main>
     <section class="page-hero">
-      <p class="hashtag">#ArtFullyTee</p>
-      <h1>RSVP</h1>
-      <p class="lead">Confirm your attendance and receive a personal QR pass for entry. Saturday, 5 December 2026.</p>
+      <p class="hashtag">#ArtFullyTee</p><h1>RSVP</h1>
+      <p class="lead">Choose your group, pick your seat and receive your access card by email and SMS. Saturday, 5 December 2026.</p>
     </section>
 
-    <section class="form-wrap">
-      <form id="rsvp-form" class="form" novalidate>
-        <div class="field">
-          <label for="name">Full name</label>
-          <input id="name" name="name" type="text" autocomplete="name" required />
-          <small class="error" data-for="name"></small>
-        </div>
+    <div class="wrap" id="app">
+      <div class="box"><h2>1. Who are you with?</h2>
+        <div class="sides" id="sides"></div>
+        <div id="gw" hidden><label for="group">Select your category</label><select id="group"></select></div></div>
+      <div class="box" id="det" hidden><h2>2. Your details</h2>
+        <label for="name">Full name</label><input id="name" autocomplete="name">
+        <div class="two"><div><label for="email">Email</label><input id="email" type="email" autocomplete="email"></div>
+        <div><label for="phone">Phone number</label><input id="phone" type="tel" autocomplete="tel" placeholder="080..."></div></div></div>
+      <div class="box" id="seatBox" hidden><h2>3. Pick your seat(s)</h2>
+        <div class="legend"><span>&#9711; Available</span><span>&#9679; Yours (rose)</span><span>&#9679; Taken (grey)</span></div>
+        <div class="tables" id="tables"></div></div>
+      <div class="bar" id="bar" hidden><span id="sum"></span><button class="btn btn-primary" id="go" disabled>Confirm &amp; get my access card</button></div>
+      <p class="err" id="err" role="alert"></p>
+    </div>
 
-        <div class="field-row">
-          <div class="field">
-            <label for="email">Email</label>
-            <input id="email" name="email" type="email" autocomplete="email" required />
-            <small class="error" data-for="email"></small>
-          </div>
-          <div class="field">
-            <label for="phone">Phone number</label>
-            <input id="phone" name="phone" type="tel" autocomplete="tel" />
-            <small class="error" data-for="phone"></small>
-          </div>
-        </div>
-
-        <fieldset class="field">
-          <legend>Will you attend?</legend>
-          <label class="choice"><input type="radio" name="attending" value="yes" checked /> Yes, I will be there</label>
-          <label class="choice"><input type="radio" name="attending" value="no" /> Sorry, I can't make it</label>
-        </fieldset>
-
-        <div class="field" id="guests-field">
-          <label for="guests">Number of guests (including you)</label>
-          <select id="guests" name="guests">
-            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="message">Message to the couple (optional)</label>
-          <textarea id="message" name="message" rows="4"></textarea>
-        </div>
-
-        <button type="submit" class="btn btn-primary">Confirm my seat</button>
-        <p class="form-status" id="form-status" role="status"></p>
-      </form>
-
-      <div class="pass" id="pass" hidden>
-        <p class="hashtag">#ArtFullyTee</p>
-        <h2>You're confirmed</h2>
-        <p class="pass-name" id="pass-name"></p>
-        <p class="pass-meta" id="pass-meta"></p>
-        <div id="qrcode" class="qrcode" aria-label="Your personal QR pass"></div>
-        <p class="pass-id" id="pass-id"></p>
-        <p class="pass-note">Show this QR code at the entrance. Save or screenshot it now.</p>
-        <div class="cta-row center">
-          <button type="button" class="btn btn-primary" id="download-pass">Download pass</button>
-          <button type="button" class="btn btn-outline" id="new-rsvp">Add another guest</button>
-        </div>
+    <div class="wrap" id="cardWrap" hidden>
+      <div class="acard" id="card">
+        <p class="hashtag">#ArtFullyTee</p><h2>Access Card</h2><p class="pass-name" id="cn"></p>
+        <dl><dt>Grouping</dt><dd id="cg"></dd><dt>Category</dt><dd id="cc"></dd><dt>Table</dt><dd id="ct"></dd><dt>Date</dt><dd id="cd"></dd></dl>
+        <div id="qr" class="qrcode"></div><p class="pass-id" id="ci"></p>
+        <p class="pass-note" id="cnote">Show this card at the entrance.</p>
+        <button class="btn btn-outline" onclick="window.print()">Print / Save as PDF</button>
       </div>
-    </section>
+    </div>
   </main>
 
-  <footer class="site-footer">
-    <p class="footer-names">Tosin &amp; Raphael</p>
-    <p>#ArtFullyTee &middot; With love, forever</p>
-    <p class="copyright">&copy; 2026 The Art of Forever</p>
-  </footer>
+  <footer class="site-footer"><p class="footer-names">Tosin &amp; Raphael</p><p>#ArtFullyTee &middot; With love, forever</p><p class="copyright">&copy; 2026 The Art of Forever</p></footer>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="pages.js"></script>
+  <script src="seats.js"></script>
 </body>
 </html>

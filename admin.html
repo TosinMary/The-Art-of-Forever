@@ -1,0 +1,58 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Admin | Seats</title>
+<style>body{font-family:system-ui,sans-serif;margin:0;padding:20px;background:#fbf7f2;color:#2b2226}table{border-collapse:collapse;width:100%;font-size:14px;background:#fff}th,td{border:1px solid #e5ddd5;padding:8px;text-align:left}button,input{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid #b5535f}button{background:#b5535f;color:#fff;cursor:pointer}button.r,button.eye{background:#fff;color:#b5535f}.x{opacity:.5}.w{overflow-x:auto}#msg{margin:10px 0;font-weight:600}.bad{color:#c0392b}.ok{color:#1f8a55}#orph{background:#fff7e0;border:1px solid #e0b400;border-radius:10px;padding:10px 14px;margin-bottom:12px}#orph:empty{display:none}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}</style></head><body>
+<h1>Seat bookings</h1>
+<div class="row"><input id="adminKey" type="password" placeholder="Admin key" autocomplete="off">
+<button type="button" class="eye" id="eyeBtn">Show</button>
+<button type="button" id="loadBtn">Load</button>
+<button type="button" id="dlBtn">Download Excel</button></div>
+<p id="msg"></p>
+<div id="orph"></div>
+<div class="w"><table><thead><tr><th>Ref</th><th>Name</th><th>Phone / Email</th><th>Category</th><th>Seats</th><th>Status</th><th>Arrived</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+<script>
+const $=id=>document.getElementById(id);
+const H=()=>({"x-admin-key":$("adminKey").value.trim()});
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const say=(t,cls)=>{$("msg").textContent=t;$("msg").className=cls||""};
+
+$("eyeBtn").onclick=()=>{const i=$("adminKey"),show=i.type==="password";i.type=show?"text":"password";$("eyeBtn").textContent=show?"Hide":"Show"};
+$("adminKey").addEventListener("keydown",e=>{if(e.key==="Enter")load()});
+$("loadBtn").onclick=load;$("dlBtn").onclick=download;
+
+async function load(){
+  say("Loading...");$("rows").innerHTML="";
+  try{
+    const r=await fetch("/api/admin/list",{headers:H()});
+    if(r.status===401)return say("Wrong admin key (or ADMIN_KEY is not set on the server).","bad");
+    if(!r.ok)return say("Server error "+r.status+". Check the Terminal / Netlify function logs.","bad");
+    const d=await r.json();
+    if(!Array.isArray(d))return say("Unexpected reply: "+JSON.stringify(d),"bad");
+    const conf=d.filter(x=>x.status==="confirmed").length;
+    say(d.length?`${conf} confirmed / ${d.length} total bookings`:"Connected, but no bookings found yet.",d.length?"ok":"");
+    $("rows").innerHTML=d.map(x=>`<tr class="${x.status==="released"?"x":""}"><td>${esc(x.id)}</td><td>${esc(x.name)}</td><td>${esc(x.phone)}<br>${esc(x.email)}</td><td>${esc(x.grouping)}<br>${esc(x.category)}</td><td>${(x.seats||[]).map(s=>"T"+esc(s).replace("-"," S")).join(", ")}</td><td>${esc(x.status)}</td><td>${x.arrivedAt?new Date(x.arrivedAt).toLocaleTimeString():""}</td><td>${x.status==="confirmed"?`<button type="button" class="r" data-id="${esc(x.id)}">Release seats</button>`:""}</td></tr>`).join("");
+    loadOrphans();
+  }catch(e){say("Could not reach the server: "+e.message,"bad")}
+}
+async function loadOrphans(){
+  try{const r=await fetch("/api/admin/orphans",{headers:H()});if(!r.ok)return;const o=await r.json();
+    $("orph").innerHTML=o.length?"<b>Locked seats with no active booking</b> (stuck from a failed booking or released card):<br>"+o.map(x=>`<div style="margin:6px 0">Table ${esc(x.seat).replace("-"," Seat ")} &nbsp; <small>(${esc(x.reason)}, ref ${esc(x.ref)})</small> <button type="button" class="r" data-seat="${esc(x.seat)}">Free this seat</button></div>`).join(""):"";
+  }catch(e){}
+}
+$("orph").onclick=async e=>{
+  const b=e.target.closest("button[data-seat]");if(!b)return;
+  const r=await fetch("/api/admin/freeseat",{method:"POST",headers:{...H(),"content-type":"application/json"},body:JSON.stringify({seat:b.dataset.seat})});
+  const d=await r.json();say(r.ok?"Seat freed.":d.error||"Failed",r.ok?"ok":"bad");loadOrphans();
+};
+$("rows").onclick=async e=>{
+  const b=e.target.closest("button[data-id]");if(!b)return;
+  if(!confirm("Release these seats and notify the guest to rebook?"))return;
+  try{const r=await fetch("/api/admin/release",{method:"POST",headers:{...H(),"content-type":"application/json"},body:JSON.stringify({id:b.dataset.id})});
+    say(r.ok?"Released. Guest notified.":"Release failed ("+r.status+")",r.ok?"ok":"bad")}catch(err){say(err.message,"bad")}
+  setTimeout(load,800);
+};
+async function download(){
+  try{const r=await fetch("/api/admin/export",{headers:H()});
+    if(!r.ok)return say(r.status===401?"Wrong admin key":"Export failed ("+r.status+")","bad");
+    const a=document.createElement("a");a.href=URL.createObjectURL(await r.blob());a.download="wedding-guests.xlsx";a.click();
+  }catch(e){say(e.message,"bad")}
+}
+</script></body></html>

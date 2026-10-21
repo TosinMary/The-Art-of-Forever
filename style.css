@@ -381,19 +381,57 @@ h2 {
   color: var(--muted);
 }
 
-/* ----- Hero photo ----- */
+/* ----- Hero photo (cross-fading carousel) -----
+   pages.js puts one <img> per photo inside this figure and moves the
+   "active" class from one to the next. All photos sit on top of each other
+   in one arch-shaped frame, so only one shows at a time. */
 .hero-photo {
+  position: relative;
   margin: 0;                               /* <figure> has default margins */
-}
-
-.hero-photo img {
   width: 100%;
-  aspect-ratio: 4 / 5;                     /* portrait shape */
-  object-fit: cover;                       /* crop to fill, never stretch */
+  aspect-ratio: 9 / 14;                     /* portrait shape */
+  overflow: hidden;
   /* Rounded top corners make an "arch" window shape.
      Order is: top-left, top-right, bottom-right, bottom-left. */
   border-radius: 200px 200px var(--radius) var(--radius);
   box-shadow: 0 20px 50px rgba(143, 60, 72, 0.18);
+}
+
+.hero-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;                       /* crop to fill, never stretch */
+  opacity: 0;
+  transition: opacity 1s ease;             /* the cross-fade */
+}
+.hero-photo img.active,
+.hero-photo img:only-child { opacity: 1; }
+
+.hero-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.hero-dots button {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+.hero-dots button.active {
+  background: #fff;
+  transform: scale(1.3);
 }
 
 
@@ -971,9 +1009,9 @@ h2 {
   .hero {
     grid-template-columns: 1fr;
   }
+  /* Phones and small tablets: hide the photo carousel completely */
   .hero-photo {
-    order: -1;                             /* moves the photo above the text */
-    max-width: 420px;
+    display: none;
   }
 
   /* Show the hamburger button and turn the nav into a dropdown panel */
@@ -1061,4 +1099,56 @@ h2 {
    that hidden always wins. */
 [hidden] {
   display: none !important;
+}
+
+
+/* ==========================================================================
+   THEME TOGGLE (light / dark)
+   Dark mode works by swapping the colour tokens at the top of this file.
+   ========================================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ivory: #16110f;
+  --blush: #2b1e21;
+  --rose: #a63a4e;
+  --rose-dark: #cf6579;
+  --ink: #f2e9e4;
+  --muted: #b5a9ad;
+  --white: #211a1c;
+  --error: #ff7a6b;
+  --gold: #d2b06a;
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.18);
+}
+[data-theme="dark"] .site-header { background: rgba(22, 17, 15, 0.92); }
+[data-theme="dark"] .field input,
+[data-theme="dark"] .field select,
+[data-theme="dark"] .field textarea { border-color: var(--line-strong); }
+[data-theme="dark"] .nav .nav-gift,
+[data-theme="dark"] .btn-primary { color: #fff; }
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-left: 1rem;
+  padding: 0;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.theme-toggle:hover { background: var(--blush); }
+.theme-toggle svg { width: 20px; height: 20px; }
+.theme-toggle .icon-sun { display: none; }
+[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+@media (max-width: 860px) {
+  .theme-toggle { order: 1; margin-left: auto; }   /* sits just left of the hamburger */
+  .nav-toggle { order: 2; margin-left: 0.5rem; }
 }

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RSVP & Seat Selection</title>
+<style>
+:root{--bg:#faf6f0;--card:#fff;--ink:#2b2420;--mut:#7a6f66;--acc:#9a6b3f;--ok:#2f7d5b;--taken:#d9d3cc;--line:#e7dfd5}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1815;--card:#26211d;--ink:#f2ebe3;--mut:#b0a498;--acc:#d9a56b;--ok:#4fb88a;--taken:#4a423b;--line:#3a332d}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,serif;padding:20px}
+.wrap{max-width:900px;margin:auto}h1{text-align:center;font-weight:400;margin:10px 0 4px}p.sub{text-align:center;color:var(--mut);margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+h2{font-size:18px;margin:0 0 12px;font-weight:600}
+.side{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.side button{padding:18px;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+.side button.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,var(--card))}
+label{display:block;font-size:14px;color:var(--mut);margin:10px 0 4px}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.tables{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.tbl{border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.tbl h3{margin:0 0 2px;font-size:15px}.tbl small{color:var(--mut)}
+.seats{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.seat{width:34px;height:34px;border-radius:50%;border:2px solid var(--acc);background:transparent;color:var(--ink);cursor:pointer;font-size:12px}
+.seat.sel{background:var(--ok);border-color:var(--ok);color:#fff}
+.seat.taken{background:var(--taken);border-color:var(--taken);cursor:not-allowed;color:var(--mut)}
+.bar{position:sticky;bottom:10px;background:var(--card);border:1px solid var(--acc);border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.go{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:11px 22px;font:inherit;cursor:pointer}.go:disabled{opacity:.45;cursor:not-allowed}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--mut);margin-bottom:10px}.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.msg{padding:14px;border-radius:10px;background:color-mix(in srgb,var(--ok) 15%,var(--card));border:1px solid var(--ok)}
+.err{color:#c0392b;font-size:14px;margin-top:8px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Tosin & Raphael</h1>
+<p class="sub">RSVP & choose your seat</p>
+
+<div class="card"><h2>1. Who are you with?</h2>
+<div class="side">
+<button id="bBride" onclick="setSide('bride')">Bride's Family<br><small>15 tables · 150 seats</small></button>
+<button id="bGroom" onclick="setSide('groom')">Groom / Couple's Guests<br><small>15 tables · 150 seats</small></button>
+</div>
+<div id="groupWrap" class="hide"><label for="group">Select your group</label>
+<select id="group" onchange="render()"></select></div>
+</div>
+
+<div class="card hide" id="detailsCard"><h2>2. Your details</h2>
+<label>Full name</label><input id="name" placeholder="e.g. Ada Okafor">
+<label>Phone number</label><input id="phone" type="tel" placeholder="080...">
+</div>
+
+<div class="card hide" id="seatCard"><h2>3. Pick your seat(s)</h2>
+<div class="legend"><span><i style="border:2px solid var(--acc)"></i>Available</span><span><i style="background:var(--ok)"></i>Yours</span><span><i style="background:var(--taken)"></i>Taken</span></div>
+<div class="tables" id="tables"></div></div>
+
+<div class="bar hide" id="bar"><span id="summary"></span><button class="go" id="submit" onclick="book()" disabled>Confirm RSVP</button></div>
+<div id="out"></div>
+</div>
+
+<script>
+// ---------- Seating config ----------
+const GROOM_GROUPS = [
+  {id:'aso',  label:'Aso Ebi Ladies', tables:[{n:1,seats:6}]},
+  {id:'men',  label:"Groomsmen",      tables:[{n:2,seats:7}]},
+  {id:'fam',  label:"Groom's Family", tables:[{n:3,seats:10},{n:4,seats:10}]},
+  {id:'gen',  label:"Other Guests",   tables:Array.from({length:11},(_,i)=>({n:i+5,seats:10}))}
+];
+const BRIDE_GROUPS = [{id:'bride',label:"Bride's Family",tables:Array.from({length:15},(_,i)=>({n:i+1,seats:10}))}];
+
+// ---------- Storage (swap these two functions for your backend) ----------
+// For real use by many guests, replace with fetch() to Supabase/Firebase/Netlify Function
+// so bookings are shared between all devices.
+async function loadBookings(){try{return JSON.parse(localStorage.getItem('seatBookings')||'{}')}catch(e){return {}}}
+async function saveBookings(b){try{localStorage.setItem('seatBookings',JSON.stringify(b))}catch(e){}}
+
+let side=null, bookings={}, picked=new Set();
+const key=(s,t,n)=>`${s}-T${t}-S${n}`;
+
+function groups(){return side==='bride'?BRIDE_GROUPS:GROOM_GROUPS}
+async function setSide(s){
+  side=s;picked.clear();bookings=await loadBookings();
+  bBride.classList.toggle('on',s==='bride');bGroom.classList.toggle('on',s==='groom');
+  group.innerHTML=groups().map(g=>`<option value="${g.id}">${g.label}</option>`).join('');
+  groupWrap.classList.toggle('hide',s==='bride');
+  detailsCard.classList.remove('hide');seatCard.classList.remove('hide');bar.classList.remove('hide');
+  render();
+}
+function render(){
+  if(!side)return;
+  picked.clear();
+  const g=groups().find(x=>x.id===group.value)||groups()[0];
+  tables.innerHTML=g.tables.map(t=>{
+    let free=0;
+    const seats=Array.from({length:t.seats},(_,i)=>{
+      const k=key(side,t.n,i+1),b=bookings[k];if(!b)free++;
+      return `<button class="seat ${b?'taken':''}" ${b?`disabled title="Taken"`:''} data-k="${k}" onclick="toggle(this)">${i+1}</button>`}).join('');
+    return `<div class="tbl"><h3>Table ${t.n}</h3><small>${free} of ${t.seats} seats free</small><div class="seats">${seats}</div></div>`}).join('');
+  update();
+}
+function toggle(el){
+  const k=el.dataset.k;
+  if(picked.has(k)){picked.delete(k);el.classList.remove('sel')}else{picked.add(k);el.classList.add('sel')}
+  update();
+}
+function pretty(k){const m=k.match(/T(\d+)-S(\d+)/);return `Table ${m[1]} Seat ${m[2]}`}
+function update(){
+  summary.textContent=picked.size?`${picked.size} seat(s): `+[...picked].map(pretty).join(', '):'No seat selected yet';
+  submit.disabled=!picked.size;
+}
+async function book(){
+  const n=name.value.trim(),p=phone.value.trim();
+  out.innerHTML='';
+  if(!n||!p){out.innerHTML='<div class="err">Please enter your name and phone number.</div>';return}
+  bookings=await loadBookings(); // re-check to avoid double booking
+  const clash=[...picked].filter(k=>bookings[k]);
+  if(clash.length){out.innerHTML='<div class="err">Sorry, someone just took: '+clash.map(pretty).join(', ')+'. Please choose again.</div>';render();return}
+  const g=groups().find(x=>x.id===group.value)||groups()[0];
+  picked.forEach(k=>bookings[k]={name:n,phone:p,group:g.label,side,at:new Date().toISOString()});
+  await saveBookings(bookings);
+  out.innerHTML=`<div class="msg">Thank you, ${n.replace(/</g,'&lt;')}! Your seat(s) are confirmed: ${[...picked].map(pretty).join(', ')}.</div>`;
+  render();
+}
+</script>
+</body>
+</html>
