@@ -117,7 +117,8 @@ export default async (req)=>{
     if(p.startsWith("admin/")){
       const k=req.headers.get("x-admin-key");
       const isAdmin=E.ADMIN_KEY&&k===E.ADMIN_KEY,isUsher=E.USHER_KEY&&k===E.USHER_KEY;
-      if(!(isAdmin||(isUsher&&p==="admin/checkin")))return J({error:"Unauthorized"},401);
+      if(!(isAdmin||(isUsher&&(p==="admin/checkin"||p==="admin/ping"))))return J({error:"Unauthorized"},401);
+      if(p==="admin/ping")return J({ok:true,role:isAdmin?"admin":"usher"});
       if(p==="admin/checkin"&&req.method==="POST"){
         const {id}=await req.json(),r=await bk.get("b:"+String(id||"").trim().toUpperCase(),{type:"json"});
         if(!r)return J({result:"invalid",reason:"Card not found"});
