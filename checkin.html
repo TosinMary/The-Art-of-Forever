@@ -65,6 +65,9 @@ button.full{width:100%;margin-top:12px}
     <div class="card">
       <div id="reader"></div>
       <button class="full" id="camBtn" style="margin-top:0">Start camera</button>
+      <button class="ghost full" id="photoBtn" type="button" style="margin-top:10px;width:100%">Scan by taking a photo instead</button>
+      <input type="file" id="photoIn" accept="image/*" capture="environment" hidden>
+      <div id="filereader" hidden></div>
       <p class="msg" id="camMsg"></p>
     </div>
 
@@ -177,20 +180,41 @@ $("chk").onclick = manual;
 $("ref").addEventListener("keydown", (e) => { if (e.key === "Enter") manual(); });
 
 /* ---------- camera ---------- */
-async function startCamera() {
+const errName = (e) => String((e && (e.name || e.message)) || e || "");
+const isDenied = (n) => /NotAllowed|Permission|denied/i.test(n);
+function camHelp(e) {
+  const n = errName(e);
+  if (typeof Html5Qrcode === "undefined") return "The scanner could not load. Check your internet connection and refresh the page.";
+  if (!window.isSecureContext) return "The camera needs a secure (https) page.";
+  if (isDenied(n)) return "Camera access is blocked. On iPhone: open Settings, find your browser (Chrome or Safari) and switch Camera on, then reload this page and tap Allow. Opening this link inside WhatsApp or another app also blocks the camera, so open it in Chrome or Safari.";
+  if (/NotFound|not found|no camera/i.test(n)) return "No camera was found on this device.";
+  if (/NotReadable|in use|Could not start/i.test(n)) return "The camera is busy. Close other apps that use the camera and try again.";
+  return "The camera could not start (" + n.slice(0, 80) + ").";
+}
+async function startCamera(auto) {
   $("camMsg").textContent = "";
+  const cfg = { fps: 10, aspectRatio: 1, qrbox: (w, h) => { const s = Math.floor(Math.min(w, h) * 0.72); return { width: s, height: s }; } };
+  const onScan = (text) => { // ignore the same code seen again within 4 seconds
+    const now = Date.now(); if (text === last.code && now - last.t < 4000) return;
+    last = { code: text, t: now }; check(text);
+  };
   try {
+    if (typeof Html5Qrcode === "undefined") throw new Error("library");
     scanner = scanner || new Html5Qrcode("reader");
-    await scanner.start({ facingMode: "environment" },
-      { fps: 10, aspectRatio: 1, qrbox: (w, h) => { const s = Math.floor(Math.min(w, h) * 0.72); return { width: s, height: s }; } },
-      (text) => { // ignore the same code seen again within 4 seconds
-        const now = Date.now(); if (text === last.code && now - last.t < 4000) return;
-        last = { code: text, t: now }; check(text);
-      });
+    try { await scanner.start({ facingMode: "environment" }, cfg, onScan); }
+    catch (e1) {
+      if (isDenied(errName(e1))) throw e1;
+      const cams = await Html5Qrcode.getCameras();           // try the back camera by name
+      if (!cams || !cams.length) throw e1;
+      const back = cams.find((c) => /back|rear|environment/i.test(c.label)) || cams[cams.length - 1];
+      await scanner.start(back.id, cfg, onScan);
+    }
     running = true; $("camBtn").textContent = "Stop camera";
   } catch (e) {
     running = false; $("camBtn").textContent = "Start camera";
-    $("camMsg").textContent = "Camera not available. Allow camera access in your browser, or type the reference below.";
+    $("camMsg").textContent = auto
+      ? "Tap Start camera to begin scanning."
+      : camHelp(e) + " You can also use the photo button or type the reference.";
   }
 }
 async function stopCamera() {
@@ -199,11 +223,25 @@ async function stopCamera() {
 }
 $("camBtn").onclick = () => (running ? stopCamera() : startCamera());
 
+/* Backup when the live camera is blocked: take a photo of the QR code */
+$("photoBtn").onclick = () => $("photoIn").click();
+$("photoIn").onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  $("camMsg").textContent = "Reading photo...";
+  try {
+    const r = await new Html5Qrcode("filereader").scanFile(f, false);
+    $("camMsg").textContent = "";
+    check(typeof r === "string" ? r : (r.decodedText || ""));
+  } catch (err) {
+    $("camMsg").textContent = "Could not read a QR code from that photo. Hold the phone closer with the whole QR in the frame, or type the reference.";
+  }
+};
+
 /* ---------- on page load: reuse the saved key ---------- */
 (async () => {
   const saved = store.get();
   if (!saved) return;
-  if (await verify(saved) === "ok") { KEY = saved; showApp(); startCamera(); }
+  if (await verify(saved) === "ok") { KEY = saved; showApp(); startCamera(true); }
   else store.del();
 })();
 </script>
