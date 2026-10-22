@@ -27,8 +27,9 @@ button.full{width:100%;margin-top:12px}
 .pw,.row{display:flex;gap:8px}.pw input,.row input{flex:1;min-width:0}
 .pw button{min-width:76px;background:transparent;color:var(--rose);border:1.5px solid var(--rose)}
 .msg{min-height:1.2em;margin:10px 0 0;color:var(--bad);font-size:.9rem}
-#reader{width:100%;border-radius:12px;overflow:hidden;background:#000}
-#reader:empty{display:none}
+#viewfinder{position:relative;width:100%;aspect-ratio:1;border-radius:14px;overflow:hidden;background:#000;margin-bottom:12px}
+#vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#viewfinder .frame{position:absolute;inset:16%;border:3px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.38)}
 #res{border-radius:18px;padding:22px 16px;text-align:center;color:#fff;margin-bottom:14px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 #res.ok{background:var(--ok)}#res.bad{background:var(--bad)}
 #res .icon{font-size:3rem;line-height:1}
@@ -63,12 +64,11 @@ button.full{width:100%;margin-top:12px}
     <div id="res" hidden role="status"></div>
 
     <div class="card">
-      <div id="reader"></div>
+      <div id="viewfinder" hidden><video id="vid" playsinline muted autoplay></video><div class="frame"></div></div>
       <button class="full" id="camBtn" style="margin-top:0">Start camera</button>
       <button class="ghost full" id="photoBtn" type="button" style="margin-top:10px;width:100%">Scan by taking a photo instead</button>
       <input type="file" id="photoIn" accept="image/*" capture="environment" hidden>
-      <div id="filereader" hidden></div>
-      <p class="msg" id="camMsg"></p>
+            <p class="msg" id="camMsg"></p>
     </div>
 
     <div class="card">
@@ -81,7 +81,7 @@ button.full{width:100%;margin-top:12px}
   </section>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="jsQR.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -179,59 +179,85 @@ async function manual() {
 $("chk").onclick = manual;
 $("ref").addEventListener("keydown", (e) => { if (e.key === "Enter") manual(); });
 
-/* ---------- camera ---------- */
+/* ---------- camera (own scanner: camera + jsQR) ---------- */
+let stream = null, loop = 0;
+const work = document.createElement("canvas"), wctx = work.getContext("2d", { willReadFrequently: true });
 const errName = (e) => String((e && (e.name || e.message)) || e || "");
-const isDenied = (n) => /NotAllowed|Permission|denied/i.test(n);
+
 function camHelp(e) {
   const n = errName(e);
-  if (typeof Html5Qrcode === "undefined") return "The scanner could not load. Check your internet connection and refresh the page.";
-  if (!window.isSecureContext) return "The camera needs a secure (https) page.";
-  if (isDenied(n)) return "Camera access is blocked. On iPhone: open Settings, find your browser (Chrome or Safari) and switch Camera on, then reload this page and tap Allow. Opening this link inside WhatsApp or another app also blocks the camera, so open it in Chrome or Safari.";
-  if (/NotFound|not found|no camera/i.test(n)) return "No camera was found on this device.";
-  if (/NotReadable|in use|Could not start/i.test(n)) return "The camera is busy. Close other apps that use the camera and try again.";
-  return "The camera could not start (" + n.slice(0, 80) + ").";
+  if (n === "insecure") return "The camera needs a secure (https) page. Use the live website address.";
+  if (n === "unsupported") return "This browser cannot open the camera. If you opened the link from WhatsApp or another app, copy it and open it in Chrome or Safari.";
+  if (n === "library") return "The scanner file did not load. Refresh the page and try again.";
+  if (/NotAllowed|Permission|denied|SecurityError/i.test(n)) return "Camera access is blocked. On iPhone: open Settings, find your browser (Chrome or Safari), switch Camera on, then reload and tap Allow. In Safari you can also tap the aA icon, then Website Settings, then Camera, then Allow.";
+  if (/NotFound|OverconstrainedError|no camera/i.test(n)) return "No usable camera was found on this device.";
+  if (/NotReadable|TrackStart|in use|Abort/i.test(n)) return "The camera is busy. Close other apps or tabs that use the camera and try again.";
+  return "The camera could not start.";
 }
 async function startCamera(auto) {
   $("camMsg").textContent = "";
-  const cfg = { fps: 10, aspectRatio: 1, qrbox: (w, h) => { const s = Math.floor(Math.min(w, h) * 0.72); return { width: s, height: s }; } };
-  const onScan = (text) => { // ignore the same code seen again within 4 seconds
-    const now = Date.now(); if (text === last.code && now - last.t < 4000) return;
-    last = { code: text, t: now }; check(text);
-  };
   try {
-    if (typeof Html5Qrcode === "undefined") throw new Error("library");
-    scanner = scanner || new Html5Qrcode("reader");
-    try { await scanner.start({ facingMode: "environment" }, cfg, onScan); }
-    catch (e1) {
-      if (isDenied(errName(e1))) throw e1;
-      const cams = await Html5Qrcode.getCameras();           // try the back camera by name
-      if (!cams || !cams.length) throw e1;
-      const back = cams.find((c) => /back|rear|environment/i.test(c.label)) || cams[cams.length - 1];
-      await scanner.start(back.id, cfg, onScan);
+    if (!window.isSecureContext) throw new Error("insecure");
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("unsupported");
+    if (typeof jsQR === "undefined") throw new Error("library");
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+    } catch (e1) {   // some phones reject the detailed request, so retry with the simplest one
+      if (/NotAllowed|Permission|denied/i.test(errName(e1))) throw e1;
+      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
     }
-    running = true; $("camBtn").textContent = "Stop camera";
+    const v = $("vid");
+    v.setAttribute("playsinline", ""); v.muted = true; v.srcObject = stream;
+    await v.play();
+    $("viewfinder").hidden = false; running = true; $("camBtn").textContent = "Stop camera";
+    scanLoop();
   } catch (e) {
-    running = false; $("camBtn").textContent = "Start camera";
+    cleanupCamera();
     $("camMsg").textContent = auto
       ? "Tap Start camera to begin scanning."
-      : camHelp(e) + " You can also use the photo button or type the reference.";
+      : camHelp(e) + " (" + errName(e).slice(0, 60) + ") You can also use the photo button or type the reference.";
   }
 }
-async function stopCamera() {
-  try { if (scanner && running) { await scanner.stop(); scanner.clear(); } } catch (e) {}
-  running = false; $("camBtn").textContent = "Start camera";
+function scanLoop() {
+  if (!running) return;
+  const v = $("vid");
+  if (v.readyState >= 2 && v.videoWidth) {
+    const sc = Math.min(1, 720 / v.videoWidth);
+    work.width = Math.floor(v.videoWidth * sc); work.height = Math.floor(v.videoHeight * sc);
+    wctx.drawImage(v, 0, 0, work.width, work.height);
+    const img = wctx.getImageData(0, 0, work.width, work.height);
+    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" });
+    if (code && code.data) {   // ignore the same code seen again within 4 seconds
+      const now = Date.now();
+      if (!(code.data === last.code && now - last.t < 4000)) { last = { code: code.data, t: now }; check(code.data); }
+    }
+  }
+  loop = setTimeout(scanLoop, 120);
 }
+function cleanupCamera() {
+  running = false; clearTimeout(loop);
+  if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+  const v = $("vid"); if (v) v.srcObject = null;
+  $("viewfinder").hidden = true; $("camBtn").textContent = "Start camera";
+}
+async function stopCamera() { cleanupCamera(); }
 $("camBtn").onclick = () => (running ? stopCamera() : startCamera());
+document.addEventListener("visibilitychange", () => { if (document.hidden && running) stopCamera(); });
 
-/* Backup when the live camera is blocked: take a photo of the QR code */
+/* Backup: take a photo of the QR code */
 $("photoBtn").onclick = () => $("photoIn").click();
 $("photoIn").onchange = async (e) => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   $("camMsg").textContent = "Reading photo...";
   try {
-    const r = await new Html5Qrcode("filereader").scanFile(f, false);
-    $("camMsg").textContent = "";
-    check(typeof r === "string" ? r : (r.decodedText || ""));
+    const bmp = await createImageBitmap(f);
+    const sc = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
+    work.width = Math.floor(bmp.width * sc); work.height = Math.floor(bmp.height * sc);
+    wctx.drawImage(bmp, 0, 0, work.width, work.height);
+    const img = wctx.getImageData(0, 0, work.width, work.height);
+    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" });
+    if (!code) throw new Error("none");
+    $("camMsg").textContent = ""; check(code.data);
   } catch (err) {
     $("camMsg").textContent = "Could not read a QR code from that photo. Hold the phone closer with the whole QR in the frame, or type the reference.";
   }
