@@ -130,6 +130,13 @@ export default async (req)=>{
         r.arrivedAt=now;await bk.setJSON("b:"+r.id,r);
         return J({result:"valid",at:lag(now),...info});
       }
+      if(p==="admin/undocheckin"&&req.method==="POST"){
+        if(!isAdmin)return J({error:"Unauthorized"},401);
+        const {id}=await req.json(),r=await bk.get("b:"+id,{type:"json"});
+        if(!r)return J({error:"Booking not found"},404);
+        await seatS.delete("a:"+id);delete r.arrivedAt;await bk.setJSON("b:"+id,r);
+        return J({ok:true});
+      }
       if(p==="admin/orphans"){
         const {blobs:sb}=await seatS.list({prefix:"s:"}),out=[];
         for(const x of sb){const ref=await seatS.get(x.key),r=await bk.get("b:"+ref,{type:"json"});
@@ -156,9 +163,15 @@ export default async (req)=>{
       }
       if(p==="admin/export"){
         const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet("Guests");
-        ws.columns=[["Ref","id"],["Name","name"],["Email","email"],["Phone","phone"],["Grouping","grouping"],["Category","category"],["Table(s)","t"],["Seat(s)","s"],["Status","status"],["Booked at","at"],["Arrived at","arr"]].map(([header,key])=>({header,key,width:22}));
+        ws.columns=[["Ref","id"],["Name","name"],["Email","email"],["Phone","phone"],["Grouping","grouping"],["Category","category"],["Table(s)","t"],["Seat(s)","s"],["Status","status"],["Attended","att"],["Booked at","at"],["Arrived at","arr"]].map(([header,key])=>({header,key,width:22}));
         ws.getRow(1).font={bold:true};
-        all.forEach(r=>ws.addRow({...r,t:tablesOf(r),s:seatsOf(r),arr:lag(r.arrivedAt)}));
+        all.forEach(r=>ws.addRow({...r,t:tablesOf(r),s:seatsOf(r),arr:lag(r.arrivedAt),att:r.status==="confirmed"?(r.arrivedAt?"Yes":"No"):"Released"}));
+        const sm=wb.addWorksheet("Attendance summary");
+        sm.columns=[{header:"Category",key:"c",width:30},{header:"Booked",key:"b",width:12},{header:"Attended",key:"a",width:12},{header:"Not yet arrived",key:"n",width:18}];
+        sm.getRow(1).font={bold:true};
+        const grp={};all.filter(r=>r.status==="confirmed").forEach(r=>{const x=grp[r.category]=grp[r.category]||{c:r.category,b:0,a:0,n:0};x.b++;r.arrivedAt?x.a++:x.n++});
+        const rowsS=Object.values(grp);rowsS.forEach(x=>sm.addRow(x));
+        sm.addRow(rowsS.reduce((t,x)=>({c:"TOTAL",b:t.b+x.b,a:t.a+x.a,n:t.n+x.n}),{c:"TOTAL",b:0,a:0,n:0})).font={bold:true};
         return new Response(await wb.xlsx.writeBuffer(),{headers:{"content-type":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","content-disposition":"attachment; filename=wedding-guests.xlsx"}});
       }
     }

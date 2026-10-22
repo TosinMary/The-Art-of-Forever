@@ -1,36 +1,99 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Admin | Seats</title>
-<style>body{font-family:system-ui,sans-serif;margin:0;padding:20px;background:#fbf7f2;color:#2b2226}table{border-collapse:collapse;width:100%;font-size:14px;background:#fff}th,td{border:1px solid #e5ddd5;padding:8px;text-align:left}button,input{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid #b5535f}button{background:#b5535f;color:#fff;cursor:pointer}button.r,button.eye{background:#fff;color:#b5535f}.x{opacity:.5}.w{overflow-x:auto}#msg{margin:10px 0;font-weight:600}.bad{color:#c0392b}.ok{color:#1f8a55}#orph{background:#fff7e0;border:1px solid #e0b400;border-radius:10px;padding:10px 14px;margin-bottom:12px}#orph:empty{display:none}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}</style></head><body>
-<h1>Seat bookings</h1>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Admin | Seats & Attendance</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:0;padding:20px;background:#fbf7f2;color:#2b2226}
+h1{margin:0 0 14px}
+table{border-collapse:collapse;width:100%;font-size:14px;background:#fff}th,td{border:1px solid #e5ddd5;padding:8px;text-align:left;vertical-align:top}
+th{background:#faf3ea}
+button,input{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid #b5535f}
+button{background:#b5535f;color:#fff;cursor:pointer}button.r,button.eye,button.chip{background:#fff;color:#b5535f}
+button.chip.on{background:#b5535f;color:#fff}button.sm{padding:4px 10px;font-size:12px}
+.x{opacity:.5}.w{overflow-x:auto}#msg{margin:10px 0;font-weight:600}.bad{color:#c0392b}.ok{color:#1f8a55}
+#orph{background:#fff7e0;border:1px solid #e0b400;border-radius:10px;padding:10px 14px;margin-bottom:12px}#orph:empty{display:none}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.stat{background:#fff;border:1px solid #e5ddd5;border-radius:12px;padding:12px 14px}
+.stat b{display:block;font-size:1.8rem;line-height:1.1}.stat span{font-size:.8rem;color:#6b6165}
+.stat.good b{color:#1f8a55}.stat.warn b{color:#b36b00}
+.bar{height:8px;background:#eadfd2;border-radius:99px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:#1f8a55}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600}
+.badge.in{background:#dff3e8;color:#17703f}.badge.no{background:#f1ebe4;color:#7a6f66}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.tools input[type=search]{flex:1;min-width:200px}
+label.auto{font-size:13px;color:#6b6165;display:flex;gap:6px;align-items:center}label.auto input{padding:0}
+</style></head><body>
+<h1>Seat bookings &amp; attendance</h1>
 <div class="row"><input id="adminKey" type="password" placeholder="Admin key" autocomplete="off">
 <button type="button" class="eye" id="eyeBtn">Show</button>
 <button type="button" id="loadBtn">Load</button>
-<button type="button" id="dlBtn">Download Excel</button></div>
+<button type="button" id="dlBtn">Download Excel</button>
+<label class="auto"><input type="checkbox" id="auto"> Auto-refresh every 30s</label></div>
 <p id="msg"></p>
+
+<div class="stats" id="stats" hidden>
+  <div class="stat"><b id="sBooked">0</b><span>Seats booked</span></div>
+  <div class="stat good"><b id="sIn">0</b><span>Checked in</span><div class="bar"><i id="sBar" style="width:0"></i></div></div>
+  <div class="stat warn"><b id="sOut">0</b><span>Not yet arrived</span></div>
+  <div class="stat"><b id="sRel">0</b><span>Released</span></div>
+</div>
+
 <div id="orph"></div>
-<div class="w"><table><thead><tr><th>Ref</th><th>Name</th><th>Phone / Email</th><th>Category</th><th>Seats</th><th>Status</th><th>Arrived</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+
+<div class="tools" id="tools" hidden>
+  <button type="button" class="chip on" data-f="all">All</button>
+  <button type="button" class="chip" data-f="in">Checked in</button>
+  <button type="button" class="chip" data-f="out">Not yet arrived</button>
+  <button type="button" class="chip" data-f="rel">Released</button>
+  <input type="search" id="q" placeholder="Search name, phone, email or ref">
+</div>
+
+<div class="w"><table><thead><tr><th>Ref</th><th>Name</th><th>Phone / Email</th><th>Category</th><th>Seats</th><th>Status</th><th>Attendance</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+
 <script>
 const $=id=>document.getElementById(id);
 const H=()=>({"x-admin-key":$("adminKey").value.trim()});
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const say=(t,cls)=>{$("msg").textContent=t;$("msg").className=cls||""};
+const when=t=>new Date(t).toLocaleString("en-NG",{timeZone:"Africa/Lagos",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+let DATA=[],FILTER="all",timer=null;
 
 $("eyeBtn").onclick=()=>{const i=$("adminKey"),show=i.type==="password";i.type=show?"text":"password";$("eyeBtn").textContent=show?"Hide":"Show"};
 $("adminKey").addEventListener("keydown",e=>{if(e.key==="Enter")load()});
 $("loadBtn").onclick=load;$("dlBtn").onclick=download;
+$("q").oninput=render;
+$("tools").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;FILTER=b.dataset.f;document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c===b));render()};
+$("auto").onchange=()=>{clearInterval(timer);if($("auto").checked)timer=setInterval(()=>load(true),30000)};
 
-async function load(){
-  say("Loading...");$("rows").innerHTML="";
+async function load(quiet){
+  if(!quiet)say("Loading...");
   try{
     const r=await fetch("/api/admin/list",{headers:H()});
     if(r.status===401)return say("Wrong admin key (or ADMIN_KEY is not set on the server).","bad");
-    if(!r.ok)return say("Server error "+r.status+". Check the Terminal / Netlify function logs.","bad");
+    if(!r.ok)return say("Server error "+r.status+". Check the Netlify function logs.","bad");
     const d=await r.json();
     if(!Array.isArray(d))return say("Unexpected reply: "+JSON.stringify(d),"bad");
-    const conf=d.filter(x=>x.status==="confirmed").length;
-    say(d.length?`${conf} confirmed / ${d.length} total bookings`:"Connected, but no bookings found yet.",d.length?"ok":"");
-    $("rows").innerHTML=d.map(x=>`<tr class="${x.status==="released"?"x":""}"><td>${esc(x.id)}</td><td>${esc(x.name)}</td><td>${esc(x.phone)}<br>${esc(x.email)}</td><td>${esc(x.grouping)}<br>${esc(x.category)}</td><td>${(x.seats||[]).map(s=>"T"+esc(s).replace("-"," S")).join(", ")}</td><td>${esc(x.status)}</td><td>${x.arrivedAt?new Date(x.arrivedAt).toLocaleTimeString():""}</td><td>${x.status==="confirmed"?`<button type="button" class="r" data-id="${esc(x.id)}">Release seats</button>`:""}</td></tr>`).join("");
+    DATA=d;render();
+    say(d.length?"Updated "+new Date().toLocaleTimeString():"Connected, but no bookings found yet.",d.length?"ok":"");
     loadOrphans();
   }catch(e){say("Could not reach the server: "+e.message,"bad")}
+}
+function render(){
+  const conf=DATA.filter(x=>x.status==="confirmed"),inn=conf.filter(x=>x.arrivedAt),rel=DATA.length-conf.length;
+  $("stats").hidden=$("tools").hidden=!DATA.length;
+  $("sBooked").textContent=conf.length;$("sIn").textContent=inn.length;$("sOut").textContent=conf.length-inn.length;$("sRel").textContent=rel;
+  $("sBar").style.width=(conf.length?Math.round(inn.length/conf.length*100):0)+"%";
+  const q=$("q").value.trim().toLowerCase();
+  const list=DATA.filter(x=>{
+    if(FILTER==="in"&&!(x.status==="confirmed"&&x.arrivedAt))return false;
+    if(FILTER==="out"&&!(x.status==="confirmed"&&!x.arrivedAt))return false;
+    if(FILTER==="rel"&&x.status!=="released")return false;
+    return !q||[x.name,x.phone,x.email,x.id].some(v=>String(v||"").toLowerCase().includes(q));
+  });
+  $("rows").innerHTML=list.length?list.map(x=>{
+    const att=x.status!=="confirmed"?'<span class="badge no">Released</span>'
+      :x.arrivedAt?`<span class="badge in">&#10004; Checked in</span><br><small>${when(x.arrivedAt)}</small> <button type="button" class="r sm" data-undo="${esc(x.id)}">Undo</button>`
+      :'<span class="badge no">Not yet arrived</span>';
+    return `<tr class="${x.status==="released"?"x":""}"><td>${esc(x.id)}</td><td>${esc(x.name)}</td><td>${esc(x.phone)}<br>${esc(x.email)}</td><td>${esc(x.grouping)}<br>${esc(x.category)}</td><td>${(x.seats||[]).map(s=>"T"+esc(s).replace("-"," S")).join(", ")}</td><td>${esc(x.status)}</td><td>${att}</td><td>${x.status==="confirmed"?`<button type="button" class="r" data-id="${esc(x.id)}">Release seats</button>`:""}</td></tr>`}).join("")
+    :'<tr><td colspan="8">No guests match.</td></tr>';
 }
 async function loadOrphans(){
   try{const r=await fetch("/api/admin/orphans",{headers:H()});if(!r.ok)return;const o=await r.json();
@@ -43,11 +106,15 @@ $("orph").onclick=async e=>{
   const d=await r.json();say(r.ok?"Seat freed.":d.error||"Failed",r.ok?"ok":"bad");loadOrphans();
 };
 $("rows").onclick=async e=>{
+  const u=e.target.closest("button[data-undo]");
+  if(u){if(!confirm("Undo this check-in? The guest will show as not yet arrived and the card can be scanned again."))return;
+    const r=await fetch("/api/admin/undocheckin",{method:"POST",headers:{...H(),"content-type":"application/json"},body:JSON.stringify({id:u.dataset.undo})});
+    say(r.ok?"Check-in undone.":"Could not undo ("+r.status+")",r.ok?"ok":"bad");return load(true)}
   const b=e.target.closest("button[data-id]");if(!b)return;
   if(!confirm("Release these seats and notify the guest to rebook?"))return;
   try{const r=await fetch("/api/admin/release",{method:"POST",headers:{...H(),"content-type":"application/json"},body:JSON.stringify({id:b.dataset.id})});
     say(r.ok?"Released. Guest notified.":"Release failed ("+r.status+")",r.ok?"ok":"bad")}catch(err){say(err.message,"bad")}
-  setTimeout(load,800);
+  setTimeout(()=>load(true),800);
 };
 async function download(){
   try{const r=await fetch("/api/admin/export",{headers:H()});
