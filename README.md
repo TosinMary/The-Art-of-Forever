@@ -3,7 +3,7 @@
 Wedding website with **seat booking, emailed access cards, an admin dashboard with Excel export, and a QR check-in scanner** for the day.
 
 - **Date:** Saturday, 5 December 2026, Ceremony 10:00 AM
-- **Venue:**Ibadan
+- **Venue:** KBK Event Center, off Akala Express, New Garage, Ibadan
 - **Live site:** https://artfullytee-tosinraphael.netlify.app
 
 ---
@@ -19,6 +19,7 @@ Wedding website with **seat booking, emailed access cards, an admin dashboard wi
 | Access card | Shown on screen, emailed to the guest, and an SMS with a link is sent (when SMS is set up) |
 | Admin dashboard | See all bookings, release a seat, free stuck seats, download an Excel sheet |
 | Check-in scanner | Ushers scan the QR in the guest's email. Green = valid, red = used or invalid |
+| Order of Program | A page guests can open only from 5:00 AM on 5 December 2026. The server checks the time, so it cannot be opened early by changing a phone's clock |
 | Notifications | You get an email for every booking and every release |
 
 ---
@@ -112,6 +113,8 @@ ArtfullyTee/
 |---|---|---|
 | `GET /api/config` | Public | Seating layout and date |
 | `GET /api/taken` | Public | List of booked seats |
+| `GET /api/program-status` | Public | Whether the program is open yet, and when it opens |
+| `GET /api/program` | Public, time-locked | The order of program (403 until the unlock time) |
 | `GET /api/card?id=ART-XXXXXX` | Public | Card details for the "View card online" link |
 | `POST /api/book` | Public | Create a booking |
 | `POST /api/admin/checkin` | Admin or usher key | Scan result and arrival record |
@@ -163,6 +166,7 @@ Set in **Netlify, Site configuration, Environment variables** (tick "Contains se
 | `BREVO_API_KEY` | Yes | Brevo API key (starts with `xkeysib-`) |
 | `SENDER_EMAIL` | Yes | Verified Brevo sender address |
 | `SENDER_NAME` | No | Display name (default: Tosin & Raphael's Wedding) |
+| `PROGRAM_UNLOCK_AT` | No | Testing only: overrides the unlock time (for example `2020-01-01T00:00:00+01:00` to preview it). **Delete it before launch** |
 | `TERMII_API_KEY` | No | Enables SMS |
 | `TERMII_SENDER` | No | Approved Termii sender ID |
 
@@ -214,6 +218,7 @@ Local bookings are stored on your computer only and do not appear on the live si
 | SMS wording | `notifyBooked` and `notifyReleased` in `api.mjs` |
 | Colours and dark mode | Tokens at the top of `style.css` and the `THEME TOGGLE` section |
 | Carousel and gallery photos | `GALLERY_IMAGES` in `pages.js` |
+| Order of program items and unlock time | `PROGRAM` and `PROGRAM_UNLOCK` in `netlify/functions/config.mjs` |
 | Story text | `story.html` |
 | Bank details | `gift.html` (change both the text and the `data-copy` value) |
 | Countdown | `WEDDING_DATE` in `pages.js` (months start at 0, December = 11) |
@@ -244,6 +249,41 @@ Local bookings are stored on your computer only and do not appear on the live si
 | Scanner cannot open camera | Use the live https address and allow camera access |
 | Excel download fails | Run `npm install exceljs@latest` and redeploy |
 | `command not found: netlify` | Use `npx netlify-cli dev` |
+
+---
+
+## 13. Security
+
+No website can be promised "unhackable". This app is built to make attacks hard and to limit the damage if something goes wrong.
+
+| Protection | How it works |
+|---|---|
+| HTTPS only | Netlify serves the site over https and the headers force browsers to keep using it |
+| Secret keys stay on the server | `ADMIN_KEY`, `USHER_KEY`, `BREVO_API_KEY` and `TERMII_API_KEY` live in Netlify environment variables and are never in the page code |
+| Constant-time key check | Keys are compared in a way that does not leak information through response time |
+| Rate limiting | 10 wrong key attempts in 15 minutes locks that visitor out. Booking is limited to 8 attempts per 10 minutes, card lookups to 60 per 10 minutes |
+| Admin cannot be reached by guests | Every admin action needs the key in a request header. The usher key can only check guests in |
+| Strict booking checks | Seat codes, name, email and phone are validated and length-limited on the server. A seat can only be written once, so two guests cannot hold the same seat |
+| Bot trap | A hidden field on the RSVP form that only bots fill in. Those requests are refused |
+| Safe display of guest input | Names and emails are escaped everywhere they are shown (pages, admin, check-in, emails) |
+| Unguessable references | Card references are generated with a cryptographically secure random generator |
+| Private files not served | `.env`, `package.json`, `netlify/` and similar paths return 404 on the live site |
+| Browser protections | Content-Security-Policy, X-Frame-Options (no framing), X-Content-Type-Options, Referrer-Policy and Permissions-Policy headers in `netlify.toml` |
+| Private pages hidden | `admin.html` and `checkin.html` are marked no-index and no-store |
+| Usher phones | The saved usher key expires after 12 hours and the **Lock** button clears it |
+
+### Your responsibilities
+- Choose long, unique keys (16+ characters) and **change them if they appear in a screenshot or message**.
+- Turn on **two-factor authentication** for Netlify, GitHub, Brevo and Termii.
+- Never commit `.env`. Check `https://your-site/.env` shows "Page not found".
+- Give the usher key only to ushers, and change it after the wedding.
+- Download the Excel sheet regularly as a backup.
+- After the wedding, consider deleting guest data, because it contains names, phone numbers and emails.
+
+### Known limits
+- Anyone with the RSVP link can still try to book. Invite codes or Cloudflare Turnstile (a free CAPTCHA) would be the next layer.
+- The CSP allows inline scripts because the pages use them. It still blocks scripts and frames from other websites.
+- Rate limiting is per visitor address, so people sharing one network share a limit.
 
 ---
 

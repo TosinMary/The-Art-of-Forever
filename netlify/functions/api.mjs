@@ -1,10 +1,13 @@
 import {getStore} from "@netlify/blobs";
+import {timingSafeEqual,randomInt} from "node:crypto";
 import ExcelJS from "exceljs";
-import {SIDES,DATE,MAX_SEATS,ONE_BOOKING_PER_GUEST,findGroup} from "./config.mjs";
+import {SIDES,DATE,MAX_SEATS,ONE_BOOKING_PER_GUEST,PROGRAM,PROGRAM_UNLOCK,findGroup} from "./config.mjs";
 
 export const config={path:"/api/*"};
 const E=process.env;
-const J=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{"content-type":"application/json"}});
+const J=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{"content-type":"application/json","cache-control":"no-store","x-content-type-options":"nosniff"}});
+// Compare secrets in constant time so response timing cannot leak the key
+const same=(a,b)=>{a=Buffer.from(String(a||""));b=Buffer.from(String(b||""));return a.length===b.length&&timingSafeEqual(a,b)};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const tablesOf=r=>[...new Set(r.seats.map(s=>s.split("-")[0]))].join(", ");
 const seatsOf=r=>r.seats.map(s=>"T"+s.replace("-"," S")).join(", ");
@@ -71,24 +74,46 @@ async function notifyReleased(r){
     email(E.ADMIN_EMAIL,`Seat released: ${r.name}`,`<p>${esc(r.name)}'s seats ${seatsOf(r)} (Ref ${r.id}) were released and the guest was notified to rebook.</p>`)]);
 }
 
-export default async (req)=>{
+export default async (req,context)=>{
+  // Send emails/SMS in the background when the platform allows it, so the page doesn't wait for them
+  const later=async(p)=>{if(context&&typeof context.waitUntil==="function"){context.waitUntil(p.catch(e=>console.error(e)));return}await p};
   const u=new URL(req.url),p=u.pathname.replace(/^\/api\//,"");
-  const seatS=getStore("seats"),bk=getStore("bookings");
+  const seatS=getStore("seats"),bk=getStore("bookings"),rl=getStore("ratelimit");
+  // Simple per-visitor rate limiting (stops password guessing and booking spam)
+  const ip=String((context&&context.ip)||req.headers.get("x-nf-client-connection-ip")||"unknown").replace(/[^\w.:-]/g,"_");
+  const tooMany=async(bucket,max,win)=>{const r=await rl.get(bucket+":"+ip,{type:"json"}).catch(()=>null);return !!r&&Date.now()-r.t<win&&r.n>=max};
+  const hit=async(bucket,win)=>{const k=bucket+":"+ip;let r=await rl.get(k,{type:"json"}).catch(()=>null);const now=Date.now();if(!r||now-r.t>=win)r={n:0,t:now};r.n++;await rl.setJSON(k,r).catch(()=>{})};
   try{
+    // Order of Program: the server checks the clock, so changing a phone's date or reading the page source does not reveal it early
+    if(p==="program-status"||p==="program"){
+      let at=new Date(E.PROGRAM_UNLOCK_AT||PROGRAM_UNLOCK);if(isNaN(at))at=new Date(PROGRAM_UNLOCK);
+      const open=Date.now()>=at.getTime();
+      if(p==="program-status")return J({unlocked:open,unlockAt:at.toISOString(),now:Date.now()});
+      if(!open)return J({locked:true,unlockAt:at.toISOString(),now:Date.now()},403);
+      return J({items:PROGRAM,date:DATE,unlockAt:at.toISOString()});
+    }
     if(p==="config")return J({SIDES,DATE,MAX_SEATS});
     if(p==="taken"){const {blobs}=await seatS.list({prefix:"s:"});return J(blobs.map(b=>b.key.slice(2)))}
-    if(p==="card"){const r=await bk.get("b:"+u.searchParams.get("id"),{type:"json"});return r?J(pub(r)):J({error:"Card not found"},404)}
+    if(p==="card"){if(await tooMany("card",60,600000))return J({error:"Too many requests. Please wait a few minutes."},429);await hit("card",600000);const r=await bk.get("b:"+u.searchParams.get("id"),{type:"json"});return r?J(pub(r)):J({error:"Card not found"},404)}
 
     if(p==="book"&&req.method==="POST"){
-      const b=await req.json(),f=findGroup(b.groupId);
-      const name=String(b.name||"").trim(),email=String(b.email||"").trim(),phone=String(b.phone||"").trim();
-      if(!f||name.length<2||!/^\S+@\S+\.\S+$/.test(email)||phone.replace(/\D/g,"").length<10)return J({error:"Please check your name, email and phone number."},400);
-      const seats=[...new Set(b.seats||[])];
+      if(await tooMany("book",8,600000))return J({error:"Too many attempts. Please wait a few minutes and try again."},429);
+      await hit("book",600000);
+      const raw=await req.text();if(raw.length>4000)return J({error:"Request too large."},413);
+      let b;try{b=JSON.parse(raw)}catch(e){return J({error:"Bad request."},400)}
+      if(!b||typeof b!=="object"||b.website)return J({error:"Invalid request."},400); // "website" is a hidden trap field only bots fill in
+      const f=findGroup(b.groupId);
+      const clean=(v,max)=>String(v??"").replace(/[\u0000-\u001f\u007f<>]/g,"").trim().slice(0,max);
+      const name=clean(b.name,80),email=clean(b.email,120),phone=clean(b.phone,20);
+      if(!f||name.length<2||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!/^[+\d][\d\s()-]{8,19}$/.test(phone)||phone.replace(/\D/g,"").length<10)return J({error:"Please check your name, email and phone number."},400);
+      // Seats must be exactly "table-seat" (e.g. 16-3). Rebuilt from numbers so "16-03" can't sneak past the lock as a "different" seat.
+      const seats=[];
+      for(const x of (Array.isArray(b.seats)?b.seats:[])){const m=/^(\d{1,2})-(\d{1,2})$/.exec(String(x));if(!m)return J({error:"Invalid seat selected."},400);const key=`${+m[1]}-${+m[2]}`;if(!seats.includes(key))seats.push(key)}
       if(!seats.length)return J({error:"Please choose a seat."},400);
       if(seats.length>MAX_SEATS)return J({error:`You can book only ${MAX_SEATS} seat${MAX_SEATS>1?"s":""}.`},400);
       for(const s of seats){const [t,n]=s.split("-").map(Number),tb=f.group.tables.find(x=>x.n===t);
         if(!tb||!(n>=1&&n<=tb.seats))return J({error:"Invalid seat selected."},400)}
-      const id="ART-"+Array.from({length:6},()=>"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*32)]).join("");
+      const id="ART-"+Array.from({length:6},()=>"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[randomInt(32)]).join("");
       const got=[],gotG=[];
       const undo=()=>Promise.all([...got.map(g=>seatS.delete("s:"+g)),...gotG.map(k=>seatS.delete(k))]);
       // One booking per guest: lock the email and phone number first (atomic, so two taps can't slip through)
@@ -110,14 +135,15 @@ export default async (req)=>{
       }
       const rec={id,name,email,phone,grouping:f.side.label,category:f.group.label,seats,status:"confirmed",at:new Date().toISOString()};
       try{await bk.setJSON("b:"+id,rec)}catch(e){await undo();throw e}
-      try{await notifyBooked(rec)}catch(e){console.error("notify failed",e)}
+      try{await later(notifyBooked(rec))}catch(e){console.error("notify failed",e)}
       return J({ok:true,booking:pub(rec)});
     }
 
     if(p.startsWith("admin/")){
+      if(await tooMany("adminfail",10,900000))return J({error:"Too many wrong attempts. Try again in 15 minutes."},429);
       const k=req.headers.get("x-admin-key");
-      const isAdmin=E.ADMIN_KEY&&k===E.ADMIN_KEY,isUsher=E.USHER_KEY&&k===E.USHER_KEY;
-      if(!(isAdmin||(isUsher&&(p==="admin/checkin"||p==="admin/ping"))))return J({error:"Unauthorized"},401);
+      const isAdmin=!!E.ADMIN_KEY&&same(k,E.ADMIN_KEY),isUsher=!!E.USHER_KEY&&same(k,E.USHER_KEY);
+      if(!(isAdmin||(isUsher&&(p==="admin/checkin"||p==="admin/ping"))))return(await hit("adminfail",900000),J({error:"Unauthorized"},401));
       if(p==="admin/ping")return J({ok:true,role:isAdmin?"admin":"usher"});
       if(p==="admin/checkin"&&req.method==="POST"){
         const {id}=await req.json(),r=await bk.get("b:"+String(id||"").trim().toUpperCase(),{type:"json"});
@@ -138,10 +164,10 @@ export default async (req)=>{
         return J({ok:true});
       }
       if(p==="admin/orphans"){
-        const {blobs:sb}=await seatS.list({prefix:"s:"}),out=[];
-        for(const x of sb){const ref=await seatS.get(x.key),r=await bk.get("b:"+ref,{type:"json"});
-          if(!r||r.status!=="confirmed")out.push({seat:x.key.slice(2),ref,reason:r?"booking "+r.status:"no booking record"})}
-        return J(out);
+        const {blobs:sb}=await seatS.list({prefix:"s:"});
+        const found=await Promise.all(sb.map(async x=>{const ref=await seatS.get(x.key),r=await bk.get("b:"+ref,{type:"json"});
+          return(!r||r.status!=="confirmed")?{seat:x.key.slice(2),ref,reason:r?"booking "+r.status:"no booking record"}:null}));
+        return J(found.filter(Boolean));
       }
       if(p==="admin/freeseat"&&req.method==="POST"){
         const {seat}=await req.json(),ref=await seatS.get("s:"+seat);
@@ -156,10 +182,12 @@ export default async (req)=>{
       if(p==="admin/release"&&req.method==="POST"){
         const {id}=await req.json(),r=await bk.get("b:"+id,{type:"json"});
         if(!r||r.status!=="confirmed")return J({error:"Booking not found or already released."},404);
-        await Promise.all(r.seats.map(s=>seatS.delete("s:"+s)));
-        for(const k of ["e:"+String(r.email).toLowerCase(),"p:"+ng(r.phone)]){if(await seatS.get(k)===r.id)await seatS.delete(k)} // let the guest rebook
-        r.status="released";r.releasedAt=new Date().toISOString();await bk.setJSON("b:"+id,r);
-        await notifyReleased(r);return J({ok:true});
+        r.status="released";r.releasedAt=new Date().toISOString();
+        await Promise.all([
+          ...r.seats.map(s=>seatS.delete("s:"+s)),
+          ...["e:"+String(r.email).toLowerCase(),"p:"+ng(r.phone)].map(async k=>{if(await seatS.get(k)===r.id)await seatS.delete(k)}), // let the guest rebook
+          bk.setJSON("b:"+id,r)]);
+        await later(notifyReleased(r));return J({ok:true});
       }
       if(p==="admin/export"){
         const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet("Guests");

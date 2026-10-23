@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order of Program | The Art of Forever</title>
+  <meta name="description" content="The order of program for Tosin and Raphael's wedding on 5 December 2026." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .prog-wrap { max-width: 640px; margin: 0 auto; padding: 0 var(--gutter) 5rem; }
+    .lock { text-align: center; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 2.2rem 1.4rem; }
+    .lock .big { font-size: 3rem; line-height: 1; }
+    .lock h2 { margin: .6rem 0 .3rem; }
+    .lock p { color: var(--muted); margin: .3rem 0; }
+    .lock .when { color: var(--ink); font-weight: 500; }
+    .cd { display: flex; justify-content: center; gap: 1.4rem; margin-top: 1.4rem; }
+    .cd div { min-width: 3.4rem; text-align: center; }
+    .cd strong { display: block; font-family: var(--font-display); font-size: 2.2rem; font-weight: 500; line-height: 1; }
+    .cd span { font-size: .78rem; color: var(--muted); }
+    .prog { list-style: none; margin: 0; padding: 0; position: relative; }
+    .prog::before { content: ""; position: absolute; left: 19px; top: 8px; bottom: 8px; width: 1px; background: var(--gold); opacity: .6; }
+    .prog li { position: relative; display: flex; gap: 1.1rem; padding: 0 0 1.7rem; }
+    .prog li:last-child { padding-bottom: 0; }
+    .prog .n {
+      flex: 0 0 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; z-index: 1;
+      background: var(--ivory); border: 1.5px solid var(--gold); color: var(--rose-dark);
+      font-family: var(--font-display); font-size: 1.2rem; font-weight: 600;
+    }
+    .prog .t { display: block; font-size: .75rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); font-weight: 500; margin-bottom: .1rem; }
+    .prog h3 { margin: 0; font-family: var(--font-display); font-size: 1.45rem; font-weight: 500; line-height: 1.25; }
+    .prog p { margin: .2rem 0 0; color: var(--muted); }
+    .prog-end { text-align: center; margin-top: 2.6rem; color: var(--gold); letter-spacing: .6em; padding-left: .6em; }
+    .prog-end p { margin: .8rem 0 0; font-family: var(--font-display); font-style: italic; font-size: 1.3rem; letter-spacing: 0; color: var(--rose-dark); }
+  </style>
+</head>
+<body data-page="program.html">
+
+  <header class="site-header" id="top">
+    <a href="index.html" class="brand">The Art of Forever</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav">
+      <span></span><span></span><span></span>
+    </button>
+    <nav id="nav" class="nav">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="story.html">Our Story</a></li>
+        <li><a href="gallery.html">Gallery</a></li>
+        <li><a href="rsvp.html">RSVP</a></li>
+        <li><a href="location.html">Location</a></li>
+        <li><a href="gift.html" class="nav-gift">Gift the Couple</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <p class="hashtag">#ArtFullyTee</p>
+      <h1>Order of Program</h1>
+      <p class="lead" id="sub">Saturday, 5 December 2026</p>
+    </section>
+
+    <div class="prog-wrap" id="box"><div class="lock"><p>Loading...</p></div></div>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-names">Tosin &amp; Raphael</p>
+    <p>#ArtFullyTee &middot; With love, forever</p>
+    <p class="copyright">&copy; 2026 The Art of Forever</p>
+  </footer>
+
+  <script src="pages.js"></script>
+  <script>
+    const box = document.getElementById("box");
+    const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const fmt = (iso) => new Date(iso).toLocaleString("en-GB", { timeZone: "Africa/Lagos", weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", hour12: true });
+    let tick = null;
+
+    function showProgram(d) {
+      clearInterval(tick);
+      document.getElementById("sub").textContent = d.date || "Saturday, 5 December 2026";
+      box.innerHTML = '<ol class="prog">' + d.items.map((it, i) =>
+        `<li><span class="n">${i + 1}</span><div>${it.time ? `<span class="t">${esc(it.time)}</span>` : ""}<h3>${esc(it.title)}</h3>${it.note ? `<p>${esc(it.note)}</p>` : ""}</div></li>`).join("") +
+        '</ol><div class="prog-end">&#10086; &#10022; &#10086;<p>With love, Tosin &amp; Raphael</p></div>';
+    }
+
+    function showLocked(d) {
+      const skew = d.now - Date.now(), at = new Date(d.unlockAt).getTime();
+      box.innerHTML = `<div class="lock"><div class="big">&#128274;</div><h2>Not open yet</h2>
+        <p>The order of program will be available to guests on</p>
+        <p class="when">${esc(fmt(d.unlockAt))}</p>
+        <div class="cd" aria-live="polite"><div><strong id="c-d">--</strong><span>days</span></div><div><strong id="c-h">--</strong><span>hours</span></div><div><strong id="c-m">--</strong><span>minutes</span></div><div><strong id="c-s">--</strong><span>seconds</span></div></div></div>`;
+      const run = () => {
+        const left = Math.max(0, at - (Date.now() + skew)), s = Math.floor(left / 1000);
+        document.getElementById("c-d").textContent = Math.floor(s / 86400);
+        document.getElementById("c-h").textContent = String(Math.floor((s % 86400) / 3600)).padStart(2, "0");
+        document.getElementById("c-m").textContent = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+        document.getElementById("c-s").textContent = String(s % 60).padStart(2, "0");
+        if (left === 0) { clearInterval(tick); setTimeout(load, 1500); }   // time reached: ask the server again
+      };
+      clearInterval(tick); run(); tick = setInterval(run, 1000);
+    }
+
+    async function load() {
+      try {
+        const r = await fetch("/api/program", { cache: "no-store" });
+        const d = await r.json();
+        if (r.ok) showProgram(d);
+        else if (r.status === 403 && d.locked) showLocked(d);
+        else throw new Error("bad");
+      } catch (e) {
+        box.innerHTML = '<div class="lock"><p>We could not load the program. Please check your connection and refresh the page.</p></div>';
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

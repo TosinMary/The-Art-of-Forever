@@ -77,10 +77,11 @@
     $("go").disabled = true; $("go").textContent = "Booking...";
     const r = await api("book", {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: $("name").value, email: $("email").value, phone: $("phone").value, groupId: grp().id, seats: [...picked] }),
+      body: JSON.stringify({ website: $("website") ? $("website").value : "", name: $("name").value, email: $("email").value, phone: $("phone").value, groupId: grp().id, seats: [...picked] }),
     });
     $("go").textContent = "Confirm & get my access card";
     if (r.ok) return showCard(r.d.booking);
+    if (r.status === 429) { $("go").disabled = false; }
     $("err").textContent = r.d.error || "Something went wrong.";
     if (r.status === 409 && r.d.seat) { await loadTaken(); render(); } else upd();
   };

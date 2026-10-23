@@ -20,6 +20,13 @@ button.chip.on{background:#b5535f;color:#fff}button.sm{padding:4px 10px;font-siz
 .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
 .tools input[type=search]{flex:1;min-width:200px}
 label.auto{font-size:13px;color:#6b6165;display:flex;gap:6px;align-items:center}label.auto input{padding:0}
+
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+#modal[hidden]{display:none}
+#modal .box{background:#fff;border-radius:14px;padding:20px;max-width:420px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+#modal p{margin:0 0 16px;font-size:1.05rem;line-height:1.4}
+#modal .btns{display:flex;gap:10px;justify-content:flex-end}
+button:disabled{opacity:.55;cursor:wait}
 </style></head><body>
 <h1>Seat bookings &amp; attendance</h1>
 <div class="row"><input id="adminKey" type="password" placeholder="Admin key" autocomplete="off">
@@ -48,32 +55,43 @@ label.auto{font-size:13px;color:#6b6165;display:flex;gap:6px;align-items:center}
 
 <div class="w"><table><thead><tr><th>Ref</th><th>Name</th><th>Phone / Email</th><th>Category</th><th>Seats</th><th>Status</th><th>Attendance</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
 
+<div id="modal" hidden><div class="box"><p id="mText"></p><div class="btns"><button type="button" class="r" id="mNo">Cancel</button><button type="button" id="mYes">Confirm</button></div></div></div>
 <script>
 const $=id=>document.getElementById(id);
 const H=()=>({"x-admin-key":$("adminKey").value.trim()});
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const say=(t,cls)=>{$("msg").textContent=t;$("msg").className=cls||""};
 const when=t=>new Date(t).toLocaleString("en-NG",{timeZone:"Africa/Lagos",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
-let DATA=[],FILTER="all",timer=null;
+let DATA=[],ORPH=[],FILTER="all",timer=null,pending=0;
+
+/* instant in-page confirmation (replaces the slow browser pop-up) */
+function ask(text,yes){return new Promise(res=>{
+  $("mText").textContent=text;$("mYes").textContent=yes||"Confirm";$("modal").hidden=false;$("mYes").focus();
+  const done=v=>{$("modal").hidden=true;$("mYes").onclick=$("mNo").onclick=null;res(v)};
+  $("mYes").onclick=()=>done(true);$("mNo").onclick=()=>done(false);
+});}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("modal").hidden)$("mNo").click()});
 
 $("eyeBtn").onclick=()=>{const i=$("adminKey"),show=i.type==="password";i.type=show?"text":"password";$("eyeBtn").textContent=show?"Hide":"Show"};
 $("adminKey").addEventListener("keydown",e=>{if(e.key==="Enter")load()});
-$("loadBtn").onclick=load;$("dlBtn").onclick=download;
+$("loadBtn").onclick=()=>load();$("dlBtn").onclick=download;
 $("q").oninput=render;
 $("tools").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;FILTER=b.dataset.f;document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",c===b));render()};
 $("auto").onchange=()=>{clearInterval(timer);if($("auto").checked)timer=setInterval(()=>load(true),30000)};
 
 async function load(quiet){
+  if(pending>0&&quiet)return;                // don't overwrite an action that is still saving
   if(!quiet)say("Loading...");
   try{
-    const r=await fetch("/api/admin/list",{headers:H()});
+    const [r,ro]=await Promise.all([fetch("/api/admin/list",{headers:H()}),fetch("/api/admin/orphans",{headers:H()})]);
     if(r.status===401)return say("Wrong admin key (or ADMIN_KEY is not set on the server).","bad");
+    if(r.status===429)return say("Too many wrong attempts. Please wait 15 minutes.","bad");
     if(!r.ok)return say("Server error "+r.status+". Check the Netlify function logs.","bad");
     const d=await r.json();
     if(!Array.isArray(d))return say("Unexpected reply: "+JSON.stringify(d),"bad");
-    DATA=d;render();
+    if(pending>0)return;
+    DATA=d;ORPH=ro.ok?await ro.json():[];render();renderOrph();
     say(d.length?"Updated "+new Date().toLocaleTimeString():"Connected, but no bookings found yet.",d.length?"ok":"");
-    loadOrphans();
   }catch(e){say("Could not reach the server: "+e.message,"bad")}
 }
 function render(){
@@ -95,31 +113,40 @@ function render(){
     return `<tr class="${x.status==="released"?"x":""}"><td>${esc(x.id)}</td><td>${esc(x.name)}</td><td>${esc(x.phone)}<br>${esc(x.email)}</td><td>${esc(x.grouping)}<br>${esc(x.category)}</td><td>${(x.seats||[]).map(s=>"T"+esc(s).replace("-"," S")).join(", ")}</td><td>${esc(x.status)}</td><td>${att}</td><td>${x.status==="confirmed"?`<button type="button" class="r" data-id="${esc(x.id)}">Release seats</button>`:""}</td></tr>`}).join("")
     :'<tr><td colspan="8">No guests match.</td></tr>';
 }
-async function loadOrphans(){
-  try{const r=await fetch("/api/admin/orphans",{headers:H()});if(!r.ok)return;const o=await r.json();
-    $("orph").innerHTML=o.length?"<b>Locked seats with no active booking</b> (stuck from a failed booking or released card):<br>"+o.map(x=>`<div style="margin:6px 0">Table ${esc(x.seat).replace("-"," Seat ")} &nbsp; <small>(${esc(x.reason)}, ref ${esc(x.ref)})</small> <button type="button" class="r" data-seat="${esc(x.seat)}">Free this seat</button></div>`).join(""):"";
-  }catch(e){}
+function renderOrph(){
+  $("orph").innerHTML=ORPH.length?"<b>Locked seats with no active booking</b> (stuck from a failed booking or released card):<br>"+ORPH.map(x=>`<div style="margin:6px 0">Table ${esc(x.seat).replace("-"," Seat ")} &nbsp; <small>(${esc(x.reason)}, ref ${esc(x.ref)})</small> <button type="button" class="r" data-seat="${esc(x.seat)}">Free this seat</button></div>`).join(""):"";
 }
+
+/* Every action updates the screen immediately, then saves in the background. If saving fails it is put back. */
+async function act(path,body,okMsg,applyNow,undoNow){
+  applyNow();render();renderOrph();say("Saving...");pending++;
+  try{
+    const r=await fetch("/api/admin/"+path,{method:"POST",headers:{...H(),"content-type":"application/json"},body:JSON.stringify(body)});
+    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||("error "+r.status))}
+    say(okMsg,"ok");
+  }catch(e){undoNow();render();renderOrph();say("Failed: "+e.message+". Change was undone.","bad")}
+  finally{pending--}
+}
+$("rows").onclick=async e=>{
+  const u=e.target.closest("button[data-undo]"),b=e.target.closest("button[data-id]");
+  if(u){const id=u.dataset.undo,rec=DATA.find(x=>x.id===id);if(!rec)return;
+    if(!await ask("Undo this check-in? The guest will show as not yet arrived and the card can be scanned again.","Undo check-in"))return;
+    const old=rec.arrivedAt;
+    act("undocheckin",{id},"Check-in undone.",()=>{delete rec.arrivedAt},()=>{rec.arrivedAt=old});return}
+  if(b){const id=b.dataset.id,rec=DATA.find(x=>x.id===id);if(!rec)return;
+    if(!await ask("Release these seats? The guest will be emailed and asked to rebook.","Release seats"))return;
+    const old={...rec};
+    act("release",{id},"Released. Guest is being notified.",()=>{rec.status="released"},()=>{Object.assign(rec,old)})}
+};
 $("orph").onclick=async e=>{
   const b=e.target.closest("button[data-seat]");if(!b)return;
-  const r=await fetch("/api/admin/freeseat",{method:"POST",headers:{...H(),"content-type":"application/json"},body:JSON.stringify({seat:b.dataset.seat})});
-  const d=await r.json();say(r.ok?"Seat freed.":d.error||"Failed",r.ok?"ok":"bad");loadOrphans();
-};
-$("rows").onclick=async e=>{
-  const u=e.target.closest("button[data-undo]");
-  if(u){if(!confirm("Undo this check-in? The guest will show as not yet arrived and the card can be scanned again."))return;
-    const r=await fetch("/api/admin/undocheckin",{method:"POST",headers:{...H(),"content-type":"application/json"},body:JSON.stringify({id:u.dataset.undo})});
-    say(r.ok?"Check-in undone.":"Could not undo ("+r.status+")",r.ok?"ok":"bad");return load(true)}
-  const b=e.target.closest("button[data-id]");if(!b)return;
-  if(!confirm("Release these seats and notify the guest to rebook?"))return;
-  try{const r=await fetch("/api/admin/release",{method:"POST",headers:{...H(),"content-type":"application/json"},body:JSON.stringify({id:b.dataset.id})});
-    say(r.ok?"Released. Guest notified.":"Release failed ("+r.status+")",r.ok?"ok":"bad")}catch(err){say(err.message,"bad")}
-  setTimeout(()=>load(true),800);
+  const seat=b.dataset.seat,old=ORPH;
+  act("freeseat",{seat},"Seat freed.",()=>{ORPH=ORPH.filter(x=>x.seat!==seat)},()=>{ORPH=old});
 };
 async function download(){
-  try{const r=await fetch("/api/admin/export",{headers:H()});
+  try{say("Preparing Excel...");const r=await fetch("/api/admin/export",{headers:H()});
     if(!r.ok)return say(r.status===401?"Wrong admin key":"Export failed ("+r.status+")","bad");
-    const a=document.createElement("a");a.href=URL.createObjectURL(await r.blob());a.download="wedding-guests.xlsx";a.click();
+    const a=document.createElement("a");a.href=URL.createObjectURL(await r.blob());a.download="wedding-guests.xlsx";a.click();say("Excel downloaded.","ok");
   }catch(e){say(e.message,"bad")}
 }
 </script></body></html>

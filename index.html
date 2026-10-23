@@ -107,6 +107,12 @@
         <a href="location.html" class="text-link">View location details</a>
       </article>
 
+      <article class="card" id="program-card">
+        <h2>Order of Program</h2>
+        <p id="program-text">Opens on the morning of the wedding, 5 December 2026.</p>
+        <a href="program.html" class="text-link" id="program-link">See when it opens</a>
+      </article>
+
       <article class="card">
         <h2>RSVP</h2>
         <p>Confirm your attendance and receive a personal QR pass for entry.</p>
@@ -130,5 +136,16 @@
   </div>
 
   <script src="pages.js"></script>
+  <script>
+    // Show on the homepage whether the Order of Program is open yet (the server decides, not this phone's clock)
+    fetch("/api/program-status", { cache: "no-store" }).then((r) => r.json()).then((d) => {
+      const t = document.getElementById("program-text"), l = document.getElementById("program-link");
+      if (d.unlocked) { t.textContent = "The order of program for today is now available."; l.textContent = "View the program"; }
+      else {
+        const when = new Date(d.unlockAt).toLocaleString("en-GB", { timeZone: "Africa/Lagos", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", hour12: true });
+        t.textContent = "Opens for guests on " + when + ".";
+      }
+    }).catch(() => {});
+  </script>
 </body>
 </html>

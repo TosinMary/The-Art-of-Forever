@@ -85,8 +85,8 @@ button.full{width:100%;margin-top:12px}
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const store = { get: () => { try { return localStorage.getItem("usherKey"); } catch (e) { return null; } },
-                set: (v) => { try { localStorage.setItem("usherKey", v); } catch (e) {} },
+const store = { get: () => { try { const o = JSON.parse(localStorage.getItem("usherKey") || "null"); return o && Date.now() - o.t < 12 * 3600e3 ? o.k : null; } catch (e) { return null; } },  // saved key expires after 12 hours
+                set: (v) => { try { localStorage.setItem("usherKey", JSON.stringify({ k: v, t: Date.now() })); } catch (e) {} },
                 del: () => { try { localStorage.removeItem("usherKey"); } catch (e) {} } };
 let KEY = "", scanner = null, running = false, last = { code: "", t: 0 }, audio = null;
 
@@ -113,7 +113,7 @@ $("unlock").onclick = unlock;
 async function verify(key) {
   try {
     const r = await fetch("/api/admin/ping", { headers: { "x-admin-key": key } });
-    return r.ok ? "ok" : r.status === 401 ? "wrong" : "error";
+    return r.ok ? "ok" : r.status === 401 ? "wrong" : r.status === 429 ? "locked" : "error";
   } catch (e) { return "offline"; }
 }
 async function unlock() {
@@ -124,6 +124,7 @@ async function unlock() {
   const v = await verify(key);
   $("unlock").disabled = false;
   if (v === "wrong") { $("loginMsg").textContent = "Wrong usher key. Please try again."; return; }
+  if (v === "locked") { $("loginMsg").textContent = "Too many wrong attempts. Please wait 15 minutes."; return; }
   if (v !== "ok") { $("loginMsg").textContent = "Cannot reach the server. Check your internet connection."; return; }
   KEY = key; store.set(key); showApp(); startCamera();
 }

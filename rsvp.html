@@ -53,7 +53,8 @@
         <div class="sides" id="sides"></div>
         <div id="gw" hidden><label for="group">Select your category</label><select id="group"></select></div></div>
       <div class="box" id="det" hidden><h2>2. Your details</h2>
-        <label for="name">Full name</label><input id="name" autocomplete="name">
+        <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true"><label>Website<input id="website" tabindex="-1" autocomplete="off"></label></div>
+        <label for="name">Full name</label><input id="name" autocomplete="name" maxlength="80">
         <div class="two"><div><label for="email">Email</label><input id="email" type="email" autocomplete="email"></div>
         <div><label for="phone">Phone number</label><input id="phone" type="tel" autocomplete="tel" placeholder="080..."></div></div></div>
       <div class="box" id="seatBox" hidden><h2>3. Pick your seat(s)</h2>
