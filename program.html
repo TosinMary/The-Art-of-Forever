@@ -49,6 +49,7 @@
         <li><a href="story.html">Our Story</a></li>
         <li><a href="gallery.html">Gallery</a></li>
         <li><a href="rsvp.html">RSVP</a></li>
+        <li><a href="program.html" class="active">Program</a></li>
         <li><a href="location.html">Location</a></li>
         <li><a href="gift.html" class="nav-gift">Gift the Couple</a></li>
       </ul>
@@ -62,7 +63,15 @@
       <p class="lead" id="sub">Saturday, 5 December 2026</p>
     </section>
 
-    <div class="prog-wrap" id="box"><div class="lock"><p>Loading...</p></div></div>
+    <div class="prog-wrap" id="box">
+      <div class="lock">
+        <div class="big">&#128274;</div>
+        <h2>Coming on 5 December 2026</h2>
+        <p>The order of program will be available on</p>
+        <p class="when">Saturday, 5 December 2026, from 5:00 AM</p>
+        <p>Please check back on the morning of the wedding. If it is already the day, refresh this page.</p>
+      </div>
+    </div>
   </main>
 
   <footer class="site-footer">
@@ -88,9 +97,10 @@
 
     function showLocked(d) {
       const skew = d.now - Date.now(), at = new Date(d.unlockAt).getTime();
-      box.innerHTML = `<div class="lock"><div class="big">&#128274;</div><h2>Not open yet</h2>
-        <p>The order of program will be available to guests on</p>
+      box.innerHTML = `<div class="lock"><div class="big">&#128274;</div><h2>Coming on 5 December 2026</h2>
+        <p>The order of program will be available on</p>
         <p class="when">${esc(fmt(d.unlockAt))}</p>
+        <p>Please check back on the morning of the wedding.</p>
         <div class="cd" aria-live="polite"><div><strong id="c-d">--</strong><span>days</span></div><div><strong id="c-h">--</strong><span>hours</span></div><div><strong id="c-m">--</strong><span>minutes</span></div><div><strong id="c-s">--</strong><span>seconds</span></div></div></div>`;
       const run = () => {
         const left = Math.max(0, at - (Date.now() + skew)), s = Math.floor(left / 1000);
@@ -111,7 +121,7 @@
         else if (r.status === 403 && d.locked) showLocked(d);
         else throw new Error("bad");
       } catch (e) {
-        box.innerHTML = '<div class="lock"><p>We could not load the program. Please check your connection and refresh the page.</p></div>';
+        /* keep the notice that is already on the page */
       }
     }
     load();

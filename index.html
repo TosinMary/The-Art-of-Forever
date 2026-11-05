@@ -36,6 +36,7 @@
         <li><a href="story.html">Our Story</a></li>
         <li><a href="gallery.html">Gallery</a></li>
         <li><a href="rsvp.html">RSVP</a></li>
+        <li><a href="program.html">Program</a></li>
         <li><a href="location.html">Location</a></li>
         <li><a href="gift.html" class="nav-gift">Gift the Couple</a></li>
       </ul>
@@ -109,8 +110,8 @@
 
       <article class="card" id="program-card">
         <h2>Order of Program</h2>
-        <p id="program-text">Opens on the morning of the wedding, 5 December 2026.</p>
-        <a href="program.html" class="text-link" id="program-link">See when it opens</a>
+        <p id="program-text">The order of program will be available on 5 December 2026.</p>
+        <a href="program.html" class="text-link" id="program-link">View the program page</a>
       </article>
 
       <article class="card">
@@ -141,10 +142,6 @@
     fetch("/api/program-status", { cache: "no-store" }).then((r) => r.json()).then((d) => {
       const t = document.getElementById("program-text"), l = document.getElementById("program-link");
       if (d.unlocked) { t.textContent = "The order of program for today is now available."; l.textContent = "View the program"; }
-      else {
-        const when = new Date(d.unlockAt).toLocaleString("en-GB", { timeZone: "Africa/Lagos", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", hour12: true });
-        t.textContent = "Opens for guests on " + when + ".";
-      }
     }).catch(() => {});
   </script>
 </body>
