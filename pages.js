@@ -357,3 +357,26 @@ if (heroCarousel && sources.length > 1 && !isMobileView) {
 
   apply(read() || (systemDark ? "dark" : "light"));
 })();
+
+
+/* ---------- "My reference" chip (shown on every page once a guest has booked or signed in to the photo wall) ---------- */
+(function () {
+  try {
+    const page = document.body.getAttribute("data-page") || "";
+    if (page === "rsvp.html" || page === "photos.html") return;
+    const o = JSON.parse(localStorage.getItem("myRef") || "null");
+    if (!o || !/^(ART|GST)-[A-Z0-9]{6}$/.test(o.ref || "")) return;
+    const st = document.createElement("style");
+    st.textContent = ".myref{position:fixed;left:12px;bottom:12px;z-index:60;display:flex;flex-direction:column;gap:1px;padding:8px 14px;border-radius:14px;" +
+      "background:var(--white);color:var(--ink);border:1px solid var(--gold);box-shadow:0 6px 20px rgba(0,0,0,.18);text-decoration:none;line-height:1.25}" +
+      ".myref span{font-size:.68rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}.myref b{font-size:.95rem;letter-spacing:.06em;color:var(--rose-dark)}";
+    document.head.appendChild(st);
+    const a = document.createElement("a");
+    a.className = "myref";
+    a.href = o.ref.startsWith("ART") ? "rsvp.html?card=" + encodeURIComponent(o.ref) : "photos.html";
+    a.title = "Your reference. It is also your Photo Wall code.";
+    const s1 = document.createElement("span"); s1.textContent = "My reference";
+    const b1 = document.createElement("b"); b1.textContent = o.ref;
+    a.append(s1, b1); document.body.appendChild(a);
+  } catch (e) {}
+})();

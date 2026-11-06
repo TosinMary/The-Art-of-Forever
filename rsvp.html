@@ -29,6 +29,11 @@
     .err{color:#c0392b;margin:.6rem 0 0}
     .acard{max-width:420px;margin:0 auto;text-align:center;background:var(--white);border:2px solid var(--gold);border-radius:var(--radius);padding:1.6rem}
     .acard dl{text-align:left;margin:1rem 0}.acard dt{font-size:.8rem;color:var(--muted);margin-top:.5rem}.acard dd{margin:0;font-weight:500}
+    .photo-note{background:var(--blush);border:1px dashed var(--gold);border-radius:12px;padding:.8rem 1rem;margin:.8rem 0;font-size:.92rem;text-align:left}
+    .mine-note{background:var(--blush);border:1px dashed var(--gold);border-radius:12px;padding:1rem;margin-bottom:1rem}
+    .mine-note b.ref{letter-spacing:.08em;color:var(--rose-dark)}
+    .mine-note .links{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.5rem}
+    .linkbtn{background:none;border:0;padding:.2rem 0;color:var(--rose-dark);text-decoration:underline;cursor:pointer;font:inherit;font-size:.92rem}
     @media(max-width:520px){.two{grid-template-columns:1fr}}
   </style>
 </head>
@@ -50,6 +55,10 @@
     </section>
 
     <div class="wrap" id="app">
+      <div class="mine-note" id="mine" hidden>
+        <b>You have already booked a seat.</b><br>Your reference is <b class="ref" id="mineRef"></b>. It is also your <b>Photo Wall code</b> for the wedding day.
+        <div class="links"><a class="text-link" id="mineCard" href="#">View my access card</a><a class="text-link" id="minePhoto" href="#">Open the Photo Wall</a></div>
+      </div>
       <div class="box"><h2>1. Who are you with?</h2>
         <div class="sides" id="sides"></div>
         <div id="gw" hidden><label for="group">Select your category</label><select id="group"></select></div></div>
@@ -63,6 +72,9 @@
         <div class="tables" id="tables"></div></div>
       <div class="bar" id="bar" hidden><span id="sum"></span><button class="btn btn-primary" id="go" disabled>Confirm &amp; get my access card</button></div>
       <p class="err" id="err" role="alert"></p>
+      <div class="box" id="resend"><h2>Already booked?</h2><p style="color:var(--muted);margin:0">Lost your reference? We will email your access card again.</p>
+        <button class="linkbtn" id="rsOpen" type="button">Email my access card again</button>
+        <div id="rsBox" hidden><label for="rsEmail">Email you booked with</label><div style="display:flex;gap:.5rem"><input id="rsEmail" type="email" autocomplete="email"><button class="btn btn-outline" id="rsGo" type="button">Send</button></div><p id="rsMsg" style="margin:.6rem 0 0;color:#c0392b"></p></div></div>
     </div>
 
     <div class="wrap" id="cardWrap" hidden>
@@ -70,6 +82,7 @@
         <p class="hashtag">#ArtFullyTee</p><h2>Access Card</h2><p class="pass-name" id="cn"></p>
         <dl><dt>Grouping</dt><dd id="cg"></dd><dt>Category</dt><dd id="cc"></dd><dt>Table</dt><dd id="ct"></dd><dt>Date</dt><dd id="cd"></dd></dl>
         <div id="qr" class="qrcode"></div><p class="pass-id" id="ci"></p>
+        <div class="photo-note"><b>Keep this reference safe.</b> It is also your <b>Photo Wall code</b>. On the wedding day, use it to sign in, take photos and see everyone's pictures.<br><a class="text-link" id="photoLink" href="photos.html">Open the Photo Wall</a></div>
         <p class="pass-note" id="cnote">Show this card at the entrance.</p>
         <button class="btn btn-outline" onclick="window.print()">Print / Save as PDF</button>
       </div>

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <title>Photo Wall | The Art of Forever</title>
+  <meta name="description" content="Share and enjoy photos from Tosin and Raphael's wedding." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .pw { max-width: 980px; margin: 0 auto; padding: 0 1rem 5rem; }
+    .panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.4rem; margin: 0 auto 1rem; }
+    .panel.narrow { max-width: 480px; }
+    .panel h2 { margin: 0 0 .4rem; font-size: 1.6rem; }
+    .panel p { color: var(--muted); margin: .3rem 0; }
+    .panel label { display: block; margin: 1rem 0 .3rem; font-size: .9rem; color: var(--muted); }
+    .panel input { width: 100%; min-height: 48px; padding: 0 .9rem; font: inherit; font-size: 16px; color: var(--ink); background: var(--ivory); border: 1px solid var(--line-strong); border-radius: 10px; }
+    .row { display: flex; gap: .5rem; }
+    .row input { flex: 1; min-width: 0; }
+    .btn-sm { min-height: 48px; padding: 0 1.1rem; }
+    .linkbtn { background: none; border: 0; padding: .3rem 0; color: var(--rose-dark); text-decoration: underline; cursor: pointer; font: inherit; font-size: .9rem; }
+    .msg { min-height: 1.2em; margin: .8rem 0 0; color: #c0392b; }
+    .okmsg { color: #1f8a55; }
+    .center { text-align: center; }
+    .cd { display: flex; justify-content: center; gap: 1.4rem; margin-top: 1.2rem; }
+    .cd div { min-width: 3.4rem; }
+    .cd strong { display: block; font-family: var(--font-display); font-size: 2.2rem; font-weight: 500; line-height: 1; }
+    .cd span { font-size: .78rem; color: var(--muted); }
+
+    .bar { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .bar .who { font-weight: 500; }
+    .bar .who small { display: block; color: var(--muted); font-weight: 400; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+    .actions .btn { text-align: center; }
+    .tabs { display: flex; gap: .5rem; margin: 1rem 0 .8rem; flex-wrap: wrap; align-items: center; }
+    .tab { padding: .45rem 1.1rem; border-radius: 999px; border: 1px solid var(--rose); background: transparent; color: var(--rose-dark); font: inherit; cursor: pointer; }
+    .tab.on { background: var(--rose); color: #fff; }
+    .tabs .spacer { flex: 1; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+    .tile { position: relative; padding: 0; border: 0; background: var(--blush); aspect-ratio: 1; border-radius: 10px; overflow: hidden; cursor: pointer; }
+    .tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s; -webkit-user-drag: none; }
+    .tile:hover img { transform: scale(1.04); }
+    .tile .mine { position: absolute; left: 6px; top: 6px; background: rgba(0,0,0,.6); color: #fff; font-size: .7rem; padding: 2px 8px; border-radius: 99px; }
+    .empty { text-align: center; color: var(--muted); padding: 2.5rem 1rem; }
+    .progress { margin-top: .8rem; font-size: .95rem; color: var(--ink); }
+    .progress .bar2 { height: 6px; background: var(--line-strong); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+    .progress .bar2 i { display: block; height: 100%; background: var(--rose); width: 0; transition: width .3s; }
+
+    .lb { position: fixed; inset: 0; z-index: 200; background: rgba(10,8,8,.94); display: flex; flex-direction: column; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+    .lb[hidden] { display: none; }
+    .lb .top { display: flex; justify-content: space-between; align-items: center; color: #fff; padding: 4px 4px 8px; gap: 8px; }
+    .lb .top small { color: #cfc6c8; display: block; }
+    .lb .x { background: rgba(255,255,255,.14); color: #fff; border: 0; border-radius: 50%; width: 42px; height: 42px; font-size: 1.5rem; cursor: pointer; flex: none; }
+    .lb .stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
+    .lb .stage img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    .lb .nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.14); color: #fff; border: 0; width: 44px; height: 44px; border-radius: 50%; font-size: 1.8rem; cursor: pointer; }
+    .lb .prev { left: 4px; } .lb .next { right: 4px; }
+    .lb .foot { padding: 10px 4px 2px; display: flex; gap: .6rem; justify-content: center; flex-wrap: wrap; align-items: center; color: #cfc6c8; font-size: .9rem; text-align: center; }
+    .lb .foot .btn { padding: .65rem 1.3rem; }
+    .lb .danger { background: transparent; border: 1px solid #ff8a7a; color: #ff8a7a; border-radius: 999px; padding: .65rem 1.2rem; font: inherit; cursor: pointer; }
+    .tile .by { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 4px; font-size: .7rem; color: #fff; text-align: left; background: linear-gradient(transparent, rgba(0,0,0,.6)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tile img { pointer-events: none; }
+    .lb canvas { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+    .codebox { background: var(--blush); border: 1px dashed var(--gold); border-radius: 12px; padding: .7rem 1rem; margin-bottom: 1rem; font-size: .92rem; }
+    .codebox b { letter-spacing: .08em; color: var(--rose-dark); }
+    .notice { font-size: .82rem; color: var(--muted); text-align: center; margin: .2rem 0 .8rem; }
+    .protected, .protected * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    .protected input { -webkit-user-select: text; user-select: text; }
+    .veil #grid, .veil #lb, .veil .tabs { filter: blur(30px); }
+    @media print { body * { display: none !important; } }
+    @media (max-width: 520px) { .grid { grid-template-columns: repeat(3, 1fr); gap: 4px; } .tile { border-radius: 6px; } .lb .nav { display: none; } }
+  </style>
+</head>
+<body data-page="photos.html">
+  <header class="site-header" id="top">
+    <a href="index.html" class="brand">The Art of Forever</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
+    <nav id="nav" class="nav">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="story.html">Our Story</a></li>
+        <li><a href="gallery.html">Gallery</a></li>
+        <li><a href="rsvp.html">RSVP</a></li>
+        <li><a href="program.html">Program</a></li>
+        <li><a href="location.html">Location</a></li>
+        <li><a href="gift.html" class="nav-gift">Gift the Couple</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <p class="hashtag">#ArtFullyTee</p>
+      <h1>Photo Wall</h1>
+      <p class="lead" id="lead">Share your moments from the wedding and enjoy everyone's photos.</p>
+    </section>
+    <div class="pw" id="root">
+      <div class="panel narrow center"><p>Loading...</p></div>
+    </div>
+  </main>
+
+  <div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Photo viewer"></div>
+  <input type="file" id="cam" accept="image/*" capture="environment" hidden>
+  <input type="file" id="pick" accept="image/*" multiple hidden>
+
+  <footer class="site-footer">
+    <p class="footer-names">Tosin &amp; Raphael</p>
+    <p>#ArtFullyTee &middot; With love, forever</p>
+    <p class="copyright">&copy; 2026 The Art of Forever</p>
+  </footer>
+
+  <script src="pages.js"></script>
+  <script>
+  (() => {
+    const $ = (id) => document.getElementById(id), root = $("root");
+    const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const fmtDate = (iso) => new Date(iso).toLocaleString("en-GB", { timeZone: "Africa/Lagos", weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", hour12: true });
+    const fmtTime = (iso) => new Date(iso).toLocaleString("en-GB", { timeZone: "Africa/Lagos", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true });
+    const SKEY = "photoWall";
+    const save = (v) => { try { v ? localStorage.setItem(SKEY, JSON.stringify(v)) : localStorage.removeItem(SKEY); } catch (e) {} };
+    const read = () => { try { const o = JSON.parse(localStorage.getItem(SKEY) || "null"); return o && o.exp > Date.now() ? o : null; } catch (e) { return null; } };
+    const myRef = () => { try { return (JSON.parse(localStorage.getItem("myRef") || "null") || {}).ref || ""; } catch (e) { return ""; } };
+    const rememberRef = (ref, name) => { try { localStorage.setItem("myRef", JSON.stringify({ ref, name })); } catch (e) {} };
+    let S = read(), items = [], total = 0, tab = "all", me = {}, uploadOpen = false, cur = -1, tick = null, busy = false, loading = false, gen = 0;
+    const isAdmin = () => S && S.role === "admin";
+
+    const api = async (path, opt = {}) => {
+      const headers = { ...(opt.headers || {}) };
+      if (S) headers.authorization = "Bearer " + S.token;
+      try {
+        const r = await fetch("/api/" + path, { ...opt, headers, cache: "no-store" });
+        let d = null; try { d = await r.json(); } catch (e) {}
+        return { ok: r.ok, status: r.status, d: d || {} };
+      } catch (e) { return { ok: false, status: 0, d: { error: "No connection. Please check your internet and try again." } }; }
+    };
+    const getBlob = async (id, size, dl) => {
+      const r = await fetch(`/api/photo?id=${id}&size=${size}${dl ? "&dl=1" : ""}`, { headers: { authorization: "Bearer " + S.token }, cache: "force-cache" });
+      if (!r.ok) throw new Error(String(r.status));
+      return r.blob();
+    };
+
+    /* ---------- protection against casual saving / sharing (the web cannot fully block screenshots) ---------- */
+    function protect() {
+      if (isAdmin()) { document.body.classList.remove("protected"); return; }
+      document.body.classList.add("protected");
+    }
+    let veilTimer = null;
+    const veil = (on, ms) => { if (isAdmin() || !S) return; document.body.classList.toggle("veil", on); clearTimeout(veilTimer); if (on && ms) veilTimer = setTimeout(() => document.body.classList.remove("veil"), ms); };
+    document.addEventListener("visibilitychange", () => veil(document.hidden));
+    window.addEventListener("blur", () => veil(true));
+    window.addEventListener("focus", () => veil(false));
+    document.addEventListener("contextmenu", (e) => { if (S && !isAdmin()) e.preventDefault(); });
+    document.addEventListener("dragstart", (e) => { if (S && !isAdmin()) e.preventDefault(); });
+    document.addEventListener("keydown", (e) => {
+      if (!S || isAdmin()) return;
+      const k = String(e.key || "");
+      if (k === "PrintScreen" || (e.metaKey && e.shiftKey && /^[345]$/.test(k)) || (e.ctrlKey && /^[ps]$/i.test(k))) {
+        veil(true, 4000); try { navigator.clipboard && navigator.clipboard.writeText(""); } catch (x) {}
+        if (/^[ps]$/i.test(k)) e.preventDefault();
+      }
+    });
+    document.addEventListener("keyup", (e) => { if (S && !isAdmin() && e.key === "PrintScreen") { veil(true, 4000); try { navigator.clipboard && navigator.clipboard.writeText(""); } catch (x) {} } });
+
+    /* ---------- screens ---------- */
+    async function boot() {
+      clearInterval(tick);
+      const st = (await api("photo-status")).d;
+      if (isAdmin()) return wall();
+      if (!st.open) return waiting(st);
+      if (!S) return login(false);
+      return wall();
+    }
+
+    function waiting(st) {
+      root.innerHTML = `<div class="panel narrow center"><div style="font-size:2.6rem">&#128247;</div><h2>Coming on 5 December 2026</h2>
+        <p>The photo wall will open on</p><p style="color:var(--ink);font-weight:500">${esc(fmtDate(st.openAt))}</p>
+        <p>Take pictures on the wedding day and see everyone's moments in one place.</p>
+        <div class="cd"><div><strong id="c-d">--</strong><span>days</span></div><div><strong id="c-h">--</strong><span>hours</span></div><div><strong id="c-m">--</strong><span>minutes</span></div><div><strong id="c-s">--</strong><span>seconds</span></div></div>
+        <p style="margin-top:1.4rem"><button class="linkbtn" id="couple">Couple login</button></p></div>`;
+      $("couple").onclick = () => login(true);
+      const skew = st.now - Date.now(), at = new Date(st.openAt).getTime();
+      const run = () => {
+        const left = Math.max(0, at - (Date.now() + skew)), s = Math.floor(left / 1000);
+        if (!$("c-d")) return clearInterval(tick);
+        $("c-d").textContent = Math.floor(s / 86400); $("c-h").textContent = String(Math.floor((s % 86400) / 3600)).padStart(2, "0");
+        $("c-m").textContent = String(Math.floor((s % 3600) / 60)).padStart(2, "0"); $("c-s").textContent = String(s % 60).padStart(2, "0");
+        if (left === 0) { clearInterval(tick); setTimeout(boot, 1500); }
+      };
+      run(); tick = setInterval(run, 1000);
+    }
+
+    function signedIn(d) {
+      S = { token: d.token, role: d.role, name: d.name, ref: d.ref || "", exp: Date.now() + 70 * 3600e3 }; save(S);
+      if (d.ref) rememberRef(d.ref, d.name);
+      history.replaceState(null, "", location.pathname);
+      wall();
+    }
+
+    function login(adminMode, prefillRef) {
+      const urlRef = new URLSearchParams(location.search).get("ref") || "";
+      const prefill = prefillRef || urlRef || myRef();
+      root.innerHTML = adminMode
+        ? `<div class="panel narrow"><h2>Couple login</h2><p>Enter your admin key to see, download and manage every photo.</p>
+            <label for="k">Admin key</label><div class="row"><input id="k" type="password" autocomplete="off"><button class="btn btn-outline btn-sm" id="eye" type="button">Show</button></div>
+            <button class="btn btn-primary" style="margin-top:1rem;width:100%" id="go">Open photo wall</button><p class="msg" id="m"></p>
+            <button class="linkbtn" id="back">Back to guest sign in</button></div>`
+        : `<div class="panel narrow"><h2>Welcome</h2><p>Enter your reference to join the photo wall.</p>
+            <label for="ref">Your reference</label><input id="ref" placeholder="ART-XXXXXX" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(prefill)}">
+            <button class="btn btn-primary" style="margin-top:1rem;width:100%" id="go">Open photo wall</button><p class="msg" id="m"></p>
+            <p style="font-size:.85rem"><b>Booked a seat?</b> Use the reference on your access card (like ART-ZMLPYY). It is also in your access card email.<br><b>No seat booked on the app?</b> Use the guest code the couple gave you.</p>
+            <button class="linkbtn" id="forgot">Forgot your reference? Email it to me</button>
+            <div id="fbox" hidden><label for="fem">Email you booked with</label><div class="row"><input id="fem" type="email" autocomplete="email"><button class="btn btn-outline btn-sm" id="fgo" type="button">Send</button></div><p class="msg" id="fm"></p></div>
+            <div><button class="linkbtn" id="couple">Couple login</button></div></div>`;
+      const go = async (name) => {
+        $("go").disabled = true; $("m").textContent = "";
+        const body = adminMode ? { adminKey: $("k").value.trim() } : { ref: $("ref").value, ...(name ? { name } : {}) };
+        const r = await api("photo-login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+        $("go").disabled = false;
+        if (r.ok && r.d.needName) return nameStep($("ref").value);
+        if (!r.ok) { if (r.status === 403 && r.d.openAt) return boot(); $("m").textContent = r.d.error || "Could not sign in."; return; }
+        signedIn(r.d);
+      };
+      $("go").onclick = () => go();
+      (adminMode ? $("k") : $("ref")).addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+      if (adminMode) { $("eye").onclick = () => { const i = $("k"), s = i.type === "password"; i.type = s ? "text" : "password"; $("eye").textContent = s ? "Hide" : "Show"; }; $("back").onclick = () => boot(); }
+      else {
+        $("couple").onclick = () => login(true);
+        $("forgot").onclick = () => { $("fbox").hidden = !$("fbox").hidden; };
+        $("fgo").onclick = async () => {
+          $("fgo").disabled = true; $("fm").style.color = ""; $("fm").textContent = "";
+          const r = await api("resend-card", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: $("fem").value }) });
+          $("fgo").disabled = false; $("fm").style.color = r.ok ? "#1f8a55" : ""; $("fm").textContent = r.ok ? r.d.message : (r.d.error || "Could not send.");
+        };
+        if (urlRef) go();   // link from the access card email signs in automatically
+      }
+    }
+
+    function nameStep(ref) {
+      root.innerHTML = `<div class="panel narrow"><h2>Welcome!</h2><p>Please tell us your name so we can set up your photo wall access.</p>
+        <label for="nm">Your name</label><input id="nm" autocomplete="name" maxlength="60" placeholder="e.g. Ada Okafor">
+        <button class="btn btn-primary" style="margin-top:1rem;width:100%" id="go2">Continue</button><p class="msg" id="m2"></p>
+        <p style="font-size:.85rem">You will get your own personal code to sign in again. Only you can download your photos.</p></div>`;
+      const go = async () => {
+        $("go2").disabled = true;
+        const r = await api("photo-login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ref, name: $("nm").value }) });
+        $("go2").disabled = false;
+        if (!r.ok) { $("m2").textContent = r.d.error || "Could not continue."; return; }
+        if (r.d.needName) { $("m2").textContent = "Please enter your name."; return; }
+        signedIn(r.d);
+      };
+      $("go2").onclick = go; $("nm").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+    }
+
+    function logout(msg) { S = null; save(null); items = []; closeLB(); thumbs.forEach((u) => URL.revokeObjectURL(u)); thumbs.clear(); document.body.classList.remove("protected", "veil"); boot().then(() => { if (msg && $("m")) $("m").textContent = msg; }); }
+
+    async function wall() {
+      protect();
+      const admin = isAdmin();
+      root.innerHTML = `<div class="bar"><div class="who">${admin ? "Couple view" : "Hi " + esc(S.name) + "!"}<small id="count"></small></div><button class="linkbtn" id="out">Sign out</button></div>
+        ${admin ? "" : `<div class="codebox">Your reference: <b>${esc(S.ref)}</b>. ${/^GST/.test(S.ref) ? "Save this code. You need it to sign in again." : "It is the same as on your access card."}</div>`}
+        <div class="panel" id="up"><div class="actions" id="acts">
+          <button class="btn btn-primary" id="bCam" type="button">&#128247; Take a photo</button>
+          <button class="btn btn-outline" id="bPick" type="button">&#128444; Choose photos</button></div>
+          <p id="upnote" style="font-size:.85rem;margin-top:.7rem"></p><div class="progress" id="prog" hidden></div></div>
+        <div class="tabs"><button class="tab on" data-t="all">All photos</button>${admin ? "" : '<button class="tab" data-t="mine">My photos</button>'}<span class="spacer"></span><button class="linkbtn" id="refresh">Refresh</button></div>
+        ${admin ? "" : '<p class="notice">These photos are for wedding guests only. Please do not screenshot or share other guests\' pictures.</p>'}
+        <div class="grid" id="grid"></div><div id="sentinel" style="height:1px"></div><p class="center" id="end" style="color:var(--muted);font-size:.85rem" hidden>You have reached the end.</p>`;
+      $("out").onclick = () => logout();
+      $("bCam").onclick = () => $("cam").click(); $("bPick").onclick = () => $("pick").click();
+      $("refresh").onclick = () => load(true);
+      document.querySelectorAll(".tab").forEach((b) => b.onclick = () => { tab = b.dataset.t; document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b)); load(true); });
+      $("grid").onclick = (e) => { const t = e.target.closest(".tile"); if (t) openLB(+t.dataset.i); };
+      new IntersectionObserver((es) => { if (es[0].isIntersecting) loadMore(); }, { rootMargin: "700px" }).observe($("sentinel"));
+      tab = "all"; await load(true);
+    }
+
+    /* ---------- loading photos (infinite scroll) ---------- */
+    async function load(reset) {
+      if (loading && !reset) return;
+      const my = ++gen; loading = true;
+      if (reset) items = [];
+      const r = await api(`photos?offset=${items.length}&limit=60${tab === "mine" ? "&mine=1" : ""}`);
+      if (my !== gen) return;
+      loading = false;
+      if (r.status === 401) return logout("Your session ended. Please sign in again.");
+      if (r.status === 403) return boot();
+      if (!r.ok) { $("upnote").textContent = r.d.error || "Could not load photos."; return; }
+      items = items.concat(r.d.items); total = r.d.total; me = r.d.me; uploadOpen = r.d.uploadOpen;
+      $("count").textContent = isAdmin() ? total + " photos shared" : "You have " + me.count + " of " + me.max + " photos on the wall";
+      $("acts").hidden = !uploadOpen;
+      $("upnote").textContent = uploadOpen
+        ? (isAdmin() ? "Photos shared by guests appear here." : "Everyone can see your photos, but only you can download them. You can delete your photos until uploads close.")
+        : "Uploads and deletions are closed. You can still scroll through the wall and download your own photos.";
+      renderGrid();
+    }
+    function loadMore() { if (!loading && items.length && items.length < total) load(false); }
+
+    const thumbs = new Map();
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return; io.unobserve(e.target); const img = e.target;
+      (async () => {
+        try {
+          let u = thumbs.get(img.dataset.id);
+          if (!u) { u = URL.createObjectURL(await getBlob(img.dataset.id, "thumb")); thumbs.set(img.dataset.id, u); }
+          img.src = u;
+        } catch (x) {}
+      })();
+    }), { rootMargin: "400px" });
+
+    function renderGrid() {
+      const admin = isAdmin();
+      $("grid").innerHTML = items.length ? items.map((m, i) =>
+        `<button class="tile" data-i="${i}" aria-label="Open photo by ${esc(m.by)}"><img data-id="${m.id}" alt="Photo by ${esc(m.by)}" draggable="false"><span class="by">${esc(m.by)}</span>${m.mine && !admin ? '<span class="mine">Yours</span>' : ""}</button>`).join("")
+        : `<div class="empty" style="grid-column:1/-1">${tab === "mine" ? "You have not shared any photos yet." : "No photos yet. Be the first to share one!"}</div>`;
+      $("grid").querySelectorAll("img[data-id]").forEach((im) => { const u = thumbs.get(im.dataset.id); if (u) im.src = u; else io.observe(im); });
+      $("end").hidden = !(items.length && items.length >= total);
+    }
+
+    /* ---------- viewer: photos are painted on a canvas (no "save image"), with the viewer's name watermarked on others' photos ---------- */
+    let confirmDel = false, tx = null, paintId = 0;
+    async function paint(m) {
+      const my = ++paintId, cv = $("lc"); if (!cv) return;
+      try {
+        const bmp = await createImageBitmap(await getBlob(m.id, "view"));
+        if (my !== paintId || !$("lc")) return;
+        cv.width = bmp.width; cv.height = bmp.height;
+        const ctx = cv.getContext("2d"); ctx.drawImage(bmp, 0, 0);
+        if (!m.mine && !isAdmin()) {
+          const label = (S.name + "  " + S.ref).toUpperCase(), fs = Math.max(14, Math.round(bmp.width / 26));
+          ctx.save(); ctx.translate(bmp.width / 2, bmp.height / 2); ctx.rotate(-Math.PI / 7);
+          ctx.font = `600 ${fs}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          const stepX = fs * label.length * 0.75, stepY = fs * 3.2, span = Math.max(bmp.width, bmp.height) * 1.4;
+          for (let y = -span; y < span; y += stepY) for (let x = -span + ((y / stepY) % 2) * (stepX / 2); x < span; x += stepX) {
+            ctx.lineWidth = Math.max(2, fs / 9); ctx.strokeStyle = "rgba(0,0,0,.28)"; ctx.strokeText(label, x, y);
+            ctx.fillStyle = "rgba(255,255,255,.34)"; ctx.fillText(label, x, y);
+          }
+          ctx.restore();
+        }
+      } catch (e) { const c = $("lc"); if (c) { c.width = 400; c.height = 120; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.font = "20px sans-serif"; x.fillText("Could not load this photo", 20, 60); } }
+    }
+    function openLB(i) {
+      cur = i; confirmDel = false; const m = items[cur]; if (!m) return;
+      const mine = m.mine, canDelete = mine && (uploadOpen || isAdmin());
+      $("lb").hidden = false; document.body.style.overflow = "hidden";
+      $("lb").innerHTML = `<div class="top"><div><b>${esc(m.by)}</b><small>${esc(fmtTime(m.at))}</small></div><button class="x" id="lx" aria-label="Close">&times;</button></div>
+        <div class="stage"><button class="nav prev" id="lp" aria-label="Previous">&#8249;</button><canvas id="lc" aria-label="Photo by ${esc(m.by)}"></canvas><button class="nav next" id="ln" aria-label="Next">&#8250;</button></div>
+        <div class="foot">${mine ? `<button class="btn btn-primary" id="ldl">&#11015; Download</button>${canDelete ? '<button class="danger" id="ld">Delete</button>' : ""}`
+        : "Only the person who took this photo can download it."}<span id="lmsg"></span></div>`;
+      $("lx").onclick = closeLB; $("lp").onclick = () => step(-1); $("ln").onclick = () => step(1);
+      paint(m);
+      if (mine) $("ldl").onclick = async () => {
+        $("ldl").disabled = true; $("lmsg").textContent = "Preparing...";
+        try {
+          const blob = await getBlob(m.id, "full", true), a = document.createElement("a");
+          a.href = URL.createObjectURL(blob); a.download = "ArtFullyTee-" + m.id.slice(14) + ".jpg"; document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 20000); $("lmsg").textContent = "";
+        } catch (e) { $("lmsg").textContent = "Could not download. Please try again."; }
+        $("ldl").disabled = false;
+      };
+      if (canDelete) $("ld").onclick = async () => {
+        if (!confirmDel) { confirmDel = true; $("ld").textContent = "Tap again to confirm"; setTimeout(() => { confirmDel = false; if ($("ld")) $("ld").textContent = "Delete"; }, 3000); return; }
+        $("ld").disabled = true;
+        const r = await api("photo-delete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: m.id }) });
+        if (r.ok) { closeLB(); load(true); } else { $("ld").disabled = false; $("ld").textContent = r.d.error || "Could not delete"; }
+      };
+      const st = $("lb").querySelector(".stage");
+      st.ontouchstart = (e) => { tx = e.touches[0].clientX; };
+      st.ontouchend = (e) => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1); };
+      if (cur >= items.length - 4) loadMore();
+    }
+    function step(d) { const n = cur + d; if (n >= 0 && n < items.length) openLB(n); }
+    function closeLB() { $("lb").hidden = true; $("lb").innerHTML = ""; document.body.style.overflow = ""; paintId++; }
+    document.addEventListener("keydown", (e) => { if ($("lb").hidden) return; if (e.key === "Escape") closeLB(); if (e.key === "ArrowLeft") step(-1); if (e.key === "ArrowRight") step(1); });
+
+    /* ---------- taking / choosing photos: shrink on the phone first, then upload ---------- */
+    async function decode(file) {
+      try { return await createImageBitmap(file, { imageOrientation: "from-image" }); }
+      catch (e) {
+        return await new Promise((res, rej) => { const im = new Image(), u = URL.createObjectURL(file); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = rej; im.src = u; });
+      }
+    }
+    async function jpeg(src, side, q) {
+      const w0 = src.width || src.naturalWidth, h0 = src.height || src.naturalHeight, sc = Math.min(1, side / Math.max(w0, h0));
+      const c = document.createElement("canvas"); c.width = Math.round(w0 * sc); c.height = Math.round(h0 * sc);
+      c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+      const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", q));
+      return { blob, w: c.width, h: c.height };
+    }
+    async function uploadFiles(files) {
+      if (busy || !files.length) return; busy = true;
+      const prog = $("prog"); prog.hidden = false; let done = 0, fail = 0, lastErr = "";
+      const draw = (txt) => { prog.innerHTML = `${esc(txt)}<div class="bar2"><i style="width:${Math.round(done / files.length * 100)}%"></i></div>`; };
+      for (let i = 0; i < files.length; i++) {
+        draw(`Uploading photo ${i + 1} of ${files.length}...`);
+        try {
+          const src = await decode(files[i]);
+          const full = await jpeg(src, 2000, .82), view = await jpeg(src, 1200, .8), thumb = await jpeg(src, 360, .75);
+          const fd = new FormData();
+          fd.append("thumb", thumb.blob, "t.jpg"); fd.append("view", view.blob, "v.jpg"); fd.append("full", full.blob, "f.jpg"); fd.append("w", full.w); fd.append("h", full.h);
+          const r = await api("photo-upload", { method: "POST", body: fd });
+          if (r.status === 401) { busy = false; return logout("Your session ended. Please sign in again."); }
+          if (!r.ok) { fail++; lastErr = r.d.error || "Upload failed."; if (r.status === 403 || /limit/i.test(lastErr)) break; } else done++;
+        } catch (e) { fail++; lastErr = "That photo could not be read. Please try another."; }
+      }
+      busy = false; draw(`${done} photo${done === 1 ? "" : "s"} shared` + (fail ? `, ${fail} not shared. ${lastErr}` : ". Thank you!"));
+      await load(true); setTimeout(() => { prog.hidden = true; }, fail ? 9000 : 3500);
+    }
+    $("cam").onchange = (e) => { const f = [...e.target.files]; e.target.value = ""; uploadFiles(f); };
+    $("pick").onchange = (e) => { const f = [...e.target.files]; e.target.value = ""; uploadFiles(f); };
+
+    boot();
+  })();
+  </script>
+</body>
+</html>

@@ -19,6 +19,8 @@ Wedding website with **seat booking, emailed access cards, an admin dashboard wi
 | Access card | Shown on screen, emailed to the guest, and an SMS with a link is sent (when SMS is set up) |
 | Admin dashboard | See all bookings, release a seat, free stuck seats, download an Excel sheet |
 | Check-in scanner | Ushers scan the QR in the guest's email. Green = valid, red = used or invalid |
+| Photo Wall | Guests sign in with the reference on their access card (or the shared guest code if they did not book a seat), take or upload up to 5 photos, and scroll through everyone's photos. Each guest can download only their own. The couple can view, download and delete all. Uploads and deletions close at 6:00 AM on 6 December 2026 |
+| My reference | After booking, the guest's reference is shown on their card, remembered on their phone (a small "My reference" chip on every page), and can be emailed again from the RSVP page |
 | Order of Program | A page guests can open only from 5:00 AM on 5 December 2026. The server checks the time, so it cannot be opened early by changing a phone's clock |
 | Notifications | You get an email for every booking and every release |
 
@@ -113,6 +115,13 @@ ArtfullyTee/
 |---|---|---|
 | `GET /api/config` | Public | Seating layout and date |
 | `GET /api/taken` | Public | List of booked seats |
+| `POST /api/photo-login` | Public | Sign in with a card reference, a personal GST code, the shared guest code plus a name, or the admin key |
+| `POST /api/resend-card` | Public | Email the access card again to the address it was booked with (same reply whether or not a booking exists) |
+| `GET /api/photos` | Signed in | List photos (newest first, 60 at a time, `?mine=1` for own photos) |
+| `GET /api/photo?id=...&size=thumb\|view\|full` | Signed in | Photo image. `full` (download) only for the owner or the couple |
+| `POST /api/photo-upload` | Signed in | Upload one photo (three JPEG sizes) |
+| `POST /api/photo-delete` | Owner or couple | Delete a photo |
+| `GET /api/photo-status` | Public | Whether the photo wall is open |
 | `GET /api/program-status` | Public | Whether the program is open yet, and when it opens |
 | `GET /api/program` | Public, time-locked | The order of program (403 until the unlock time) |
 | `GET /api/card?id=ART-XXXXXX` | Public | Card details for the "View card online" link |
@@ -166,6 +175,10 @@ Set in **Netlify, Site configuration, Environment variables** (tick "Contains se
 | `BREVO_API_KEY` | Yes | Brevo API key (starts with `xkeysib-`) |
 | `SENDER_EMAIL` | Yes | Verified Brevo sender address |
 | `SENDER_NAME` | No | Display name (default: Tosin & Raphael's Wedding) |
+| `PHOTO_GUEST_CODE` | No | The shared photo-wall code for guests without a booking. Overrides `GENERIC_PHOTO_REF` in `config.mjs` |
+| `PHOTOS_UPLOAD_UNTIL_AT` | No | Testing only: overrides the upload deadline |
+| `PHOTOS_OPEN_AT` | No | Testing only: overrides when the photo wall opens. **Delete it before launch** |
+| `PHOTO_SECRET` | No | Secret used to sign photo-wall sign-ins. If missing, it is derived from `ADMIN_KEY` |
 | `PROGRAM_UNLOCK_AT` | No | Testing only: overrides the unlock time (for example `2020-01-01T00:00:00+01:00` to preview it). **Delete it before launch** |
 | `TERMII_API_KEY` | No | Enables SMS |
 | `TERMII_SENDER` | No | Approved Termii sender ID |
@@ -218,6 +231,7 @@ Local bookings are stored on your computer only and do not appear on the live si
 | SMS wording | `notifyBooked` and `notifyReleased` in `api.mjs` |
 | Colours and dark mode | Tokens at the top of `style.css` and the `THEME TOGGLE` section |
 | Carousel and gallery photos | `GALLERY_IMAGES` in `pages.js` |
+| Photo wall opening time, upload deadline, photos per guest, shared guest code | `PHOTOS_OPEN`, `PHOTOS_UPLOAD_UNTIL`, `MAX_PHOTOS_PER_GUEST`, `GENERIC_PHOTO_REF` in `config.mjs` |
 | Order of program items and unlock time | `PROGRAM` and `PROGRAM_UNLOCK` in `netlify/functions/config.mjs` |
 | Story text | `story.html` |
 | Bank details | `gift.html` (change both the text and the `data-copy` value) |
@@ -233,6 +247,9 @@ Local bookings are stored on your computer only and do not appear on the live si
 - Brevo's free plan allows 300 emails a day. A Gmail sender address can land in spam, so a domain email improves delivery.
 - Check-in needs phone signal or Wi-Fi at the venue. Test it on site.
 - Maximum 10 seats per booking.
+- **Photo wall storage:** photos are kept in Netlify Blobs. A full-size photo is about 0.5 to 1.2 MB, so 300 guests sharing 20 photos each could reach several GB. Check your Netlify plan's Blobs allowance before the wedding, and lower `MAX_PHOTOS_PER_GUEST` if needed.
+- **Photo wall and screenshots:** a website cannot switch screenshots off. Guests can see each other's photos, so a determined guest can still photograph or screenshot their screen. The wall adds deterrents: other guests' photos are painted on a canvas (no "save image"), carry a faint watermark with the viewer's name and reference, blur when the page loses focus or a screenshot shortcut is pressed, block right-click, long-press save, drag and printing, and only the owner can download the full-size file.
+- **Photo wall sign-in:** anyone who has a guest's reference can sign in as that guest. The shared guest code lets anyone who knows it create a personal GST code, so share it only with guests who did not book (up to 500 such sign-ins). A guest keeps at most 5 photos on the wall at a time, and deleting a photo frees a slot until uploads close.
 
 ---
 

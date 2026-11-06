@@ -10,8 +10,26 @@
     $("ct").textContent = c.tables; $("cd").textContent = c.date; $("ci").textContent = c.id;
     if (c.status === "released") $("cnote").textContent = "This card is no longer valid. Please rebook your seat.";
     $("qr").innerHTML = ""; new QRCode($("qr"), { text: c.id + "|" + c.name, width: 160, height: 160 });
+    if ($("photoLink")) $("photoLink").href = "photos.html?ref=" + encodeURIComponent(c.id);
+    if (c.status !== "released") { try { localStorage.setItem("myRef", JSON.stringify({ ref: c.id, name: c.name })); } catch (e) {} }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+
+  // Returning guest on this phone: show their reference again
+  try {
+    const mr = JSON.parse(localStorage.getItem("myRef") || "null");
+    if (mr && /^ART-/.test(mr.ref) && !new URLSearchParams(location.search).get("card")) {
+      $("mine").hidden = false; $("mineRef").textContent = mr.ref;
+      $("mineCard").href = "rsvp.html?card=" + encodeURIComponent(mr.ref); $("minePhoto").href = "photos.html?ref=" + encodeURIComponent(mr.ref);
+    }
+  } catch (e) {}
+  // "Email my access card again" (sent only to the address it was booked with)
+  $("rsOpen").onclick = () => { $("rsBox").hidden = !$("rsBox").hidden; };
+  $("rsGo").onclick = async () => {
+    $("rsGo").disabled = true; $("rsMsg").textContent = ""; $("rsMsg").style.color = "";
+    const r = await api("resend-card", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: $("rsEmail").value }) });
+    $("rsGo").disabled = false; $("rsMsg").style.color = r.ok ? "#1f8a55" : ""; $("rsMsg").textContent = r.ok ? r.d.message : (r.d.error || "Could not send. Please try again.");
+  };
 
   const cardId = new URLSearchParams(location.search).get("card");
   if (cardId) {

@@ -1,7 +1,7 @@
 import {getStore} from "@netlify/blobs";
-import {timingSafeEqual,randomInt} from "node:crypto";
+import {timingSafeEqual,randomInt,randomBytes,createHmac} from "node:crypto";
 import ExcelJS from "exceljs";
-import {SIDES,DATE,MAX_SEATS,ONE_BOOKING_PER_GUEST,PROGRAM,PROGRAM_UNLOCK,findGroup} from "./config.mjs";
+import {SIDES,DATE,MAX_SEATS,ONE_BOOKING_PER_GUEST,PROGRAM,PROGRAM_UNLOCK,PHOTOS_OPEN,PHOTOS_UPLOAD_UNTIL,MAX_PHOTOS_PER_GUEST,GENERIC_PHOTO_REF,findGroup} from "./config.mjs";
 
 export const config={path:"/api/*"};
 const E=process.env;
@@ -13,6 +13,21 @@ const tablesOf=r=>[...new Set(r.seats.map(s=>s.split("-")[0]))].join(", ");
 const seatsOf=r=>r.seats.map(s=>"T"+s.replace("-"," S")).join(", ");
 const pub=r=>({id:r.id,name:r.name,grouping:r.grouping,category:r.category,tables:tablesOf(r),seats:seatsOf(r),date:DATE,status:r.status});
 const lag=t=>t?new Date(t).toLocaleString("en-NG",{timeZone:"Africa/Lagos"}):"";
+// ---------- Photo wall helpers ----------
+const photoState=()=>{let o=new Date(E.PHOTOS_OPEN_AT||PHOTOS_OPEN);if(isNaN(o))o=new Date(PHOTOS_OPEN);let u=new Date(E.PHOTOS_UPLOAD_UNTIL_AT||PHOTOS_UPLOAD_UNTIL);if(isNaN(u))u=new Date(PHOTOS_UPLOAD_UNTIL);const n=Date.now();
+  return{open:n>=o.getTime(),uploadOpen:n>=o.getTime()&&n<=u.getTime(),openAt:o.toISOString(),uploadUntil:u.toISOString(),now:n}};
+const tokSecret=()=>E.PHOTO_SECRET||("photo|"+(E.ADMIN_KEY||""));
+const signTok=(role,ref,name)=>{const p=Buffer.from(JSON.stringify({r:role,f:ref,n:name,e:Date.now()+72*3600e3})).toString("base64url");
+  return p+"."+createHmac("sha256",tokSecret()).update(p).digest("base64url")};
+const verifyTok=t=>{if(!t||!(E.PHOTO_SECRET||E.ADMIN_KEY))return null;const [p,sig]=String(t).split(".");if(!p||!sig)return null;
+  if(!same(sig,createHmac("sha256",tokSecret()).update(p).digest("base64url")))return null;
+  try{const o=JSON.parse(Buffer.from(p,"base64url").toString());return o.e>Date.now()?o:null}catch(e){return null}};
+const clean2=(v,max)=>String(v??"").replace(/[\u0000-\u001f\u007f<>]/g,"").trim().slice(0,max);
+const code6=()=>Array.from({length:6},()=>"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[randomInt(32)]).join("");
+const normRef=t=>{let id=String(t||"").split("|")[0].trim().toUpperCase().replace(/\s+/g,"");
+  if(/^ART-[A-Z0-9]{6}$/.test(id)||/^GST-[A-Z0-9]{6}$/.test(id))return id;if(/^[A-Z0-9]{6}$/.test(id))return"ART-"+id;if(/^ART[A-Z0-9]{6}$/.test(id))return"ART-"+id.slice(3);return id};
+const shortName=n=>{const w=String(n||"Guest").trim().split(/\s+/);return w.length>1?w[0]+" "+w[w.length-1][0]+".":w[0]};
+const toAB=b=>b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);
 const site=()=>E.URL||"https://artfullytee-tosinraphael.netlify.app";
 
 async function email(to,subject,html){
@@ -51,6 +66,7 @@ const cardHtml=r=>{
 <tr><td align="center" style="padding:24px 22px 0"><table role="presentation" cellpadding="0" cellspacing="0" style="border:1px solid #dcc58f;border-radius:10px;background:#ffffff"><tr><td style="padding:12px">
 <img alt="Your QR code" width="170" height="170" style="display:block" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=${encodeURIComponent(r.id+"|"+r.name)}"></td></tr></table></td></tr>
 <tr><td style="padding:12px 22px 0;${F}font-size:15px;letter-spacing:4px;font-weight:bold;color:#5b1a2a">${r.id}</td></tr>
+<tr><td style="padding:14px 22px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6ecd9;border:1px solid #dcc58f;border-radius:10px"><tr><td style="padding:12px 14px;${F}font-size:13px;line-height:1.55;color:#3b1f27;text-align:center"><b>Your reference <span style="color:#5b1a2a;letter-spacing:2px">${r.id}</span> is also your Photo Wall code.</b><br>On the wedding day, use it to sign in, take photos and see everyone&#8217;s pictures.<br><a href="${site()}/photos.html?ref=${r.id}" style="color:#7a1f3d">Open the Photo Wall</a></td></tr></table></td></tr>
 <tr><td style="padding:18px 22px 0;color:#c9a45c;font-size:15px;letter-spacing:6px">&mdash;&mdash;&mdash; &#9829; &mdash;&mdash;&mdash;</td></tr>
 <tr><td style="padding:12px 26px 0;${F}font-size:13px;color:#6b565c">Please show this card at the entrance.</td></tr>
 <tr><td style="padding:6px 26px 0;${F}font-size:15px;font-style:italic;color:#b08a3e">Thank you for being part of our special day.</td></tr>
@@ -62,7 +78,7 @@ const cardHtml=r=>{
 async function notifyBooked(r){
   const task=[
     email(r.email,"Your Access Card · Tosin & Raphael’s Wedding, 5 December 2026",cardHtml(r)),
-    sms(r.phone,`Hi ${r.name.split(" ")[0]}, your seat is confirmed for Tosin & Raphael's wedding, ${DATE}. ${r.category}, Table ${tablesOf(r)}. Ref ${r.id}. Card: ${site()}/rsvp.html?card=${r.id}`),
+    sms(r.phone,`Hi ${r.name.split(" ")[0]}, your seat is confirmed for Tosin & Raphael's wedding, ${DATE}. ${r.category}, Table ${tablesOf(r)}. Ref ${r.id} (also your Photo Wall code). Card: ${site()}/rsvp.html?card=${r.id}`),
     email(E.ADMIN_EMAIL,`New booking: ${r.name} (${r.category})`,`<p>${esc(r.name)} booked ${seatsOf(r)}.<br>${esc(r.email)} · ${esc(r.phone)}<br>Ref ${r.id}</p>`)];
   await Promise.allSettled(task);
 }
@@ -84,6 +100,115 @@ export default async (req,context)=>{
   const tooMany=async(bucket,max,win)=>{const r=await rl.get(bucket+":"+ip,{type:"json"}).catch(()=>null);return !!r&&Date.now()-r.t<win&&r.n>=max};
   const hit=async(bucket,win)=>{const k=bucket+":"+ip;let r=await rl.get(k,{type:"json"}).catch(()=>null);const now=Date.now();if(!r||now-r.t>=win)r={n:0,t:now};r.n++;await rl.setJSON(k,r).catch(()=>{})};
   try{
+    // ===== Photo wall: everyone with a valid card can view; only the owner (or the couple) can download the full-size photo =====
+    // "I lost my reference": email the access card again to the address it was booked with (never shows it on screen)
+    if(p==="resend-card"&&req.method==="POST"){
+      if(await tooMany("resend",5,3600000))return J({error:"Too many requests. Please try again in an hour."},429);
+      await hit("resend",3600000);
+      let b={};try{b=JSON.parse(await req.text()||"{}")}catch(e){}
+      const em=clean2(b.email,120).toLowerCase();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em))return J({error:"Please enter a valid email address."},400);
+      const bid=await seatS.get("e:"+em),rec=bid?await bk.get("b:"+bid,{type:"json"}):null;
+      if(rec&&rec.status==="confirmed"){
+        const last=await rl.get("resend:"+em,{type:"json"}).catch(()=>null);
+        if(!last||Date.now()-last.t>300000){
+          await rl.setJSON("resend:"+em,{t:Date.now()});
+          await later(Promise.allSettled([
+            email(rec.email,"Your Access Card \u00b7 Tosin & Raphael\u2019s Wedding, 5 December 2026",cardHtml(rec)),
+            sms(rec.phone,`Hi ${rec.name.split(" ")[0]}, your reference is ${rec.id} (also your Photo Wall code). Card: ${site()}/rsvp.html?card=${rec.id}`)]));
+        }
+      }
+      return J({ok:true,message:"If a booking exists for that email address, we have sent the access card to it. Please check your inbox and spam folder."});
+    }
+    if(p.startsWith("photo")){
+      const ph=getStore("photos"),pm=getStore("photometa"),st=photoState();
+      if(p==="photo-status")return J(st);
+      if(p==="photo-login"&&req.method==="POST"){
+        if(await tooMany("photologin",15,900000))return J({error:"Too many attempts. Please wait 15 minutes."},429);
+        let b={};try{b=JSON.parse(await req.text()||"{}")}catch(e){}
+        if(b.adminKey){
+          if(!E.ADMIN_KEY||!same(b.adminKey,E.ADMIN_KEY)){await hit("photologin",900000);return J({error:"Wrong key."},401)}
+          return J({token:signTok("admin","admin","The Couple"),role:"admin",name:"The Couple"});
+        }
+        if(!st.open)return J({error:"The photo wall is not open yet.",...st},403);
+        const ref=normRef(b.ref),generic=normRef(E.PHOTO_GUEST_CODE||GENERIC_PHOTO_REF);
+        if(ref===generic){   // shared code for guests without a booking: each person gets their own personal code
+          const nm=clean2(b.name,60);
+          if(nm.length<2)return J({needName:true});
+          if(await tooMany("walkin",10,3600000))return J({error:"Too many new sign-ins from this connection. Please try again later."},429);
+          const {blobs:wl}=await pm.list({prefix:"w:"});if(wl.length>=500)return J({error:"The photo wall is full. Please see the couple."},429);
+          await hit("walkin",3600000);
+          const code="GST-"+code6();await pm.setJSON("w:"+code,{name:nm,at:new Date().toISOString()});
+          return J({token:signTok("guest",code,nm),role:"guest",name:nm.split(" ")[0],ref:code,personal:true});
+        }
+        if(/^GST-[A-Z0-9]{6}$/.test(ref)){   // returning guest who signed in with the shared code before
+          const w=await pm.get("w:"+ref,{type:"json"}).catch(()=>null);
+          if(!w){await hit("photologin",900000);return J({error:"We could not find that code. Please check it and try again."},401)}
+          return J({token:signTok("guest",ref,w.name),role:"guest",name:String(w.name).split(" ")[0],ref});
+        }
+        const r=/^ART-[A-Z0-9]{6}$/.test(ref)?await bk.get("b:"+ref,{type:"json"}):null;
+        if(!r||r.status!=="confirmed"){await hit("photologin",900000);return J({error:"We could not find that reference. Please check the reference on your access card."},401)}
+        return J({token:signTok("guest",r.id,r.name),role:"guest",name:String(r.name).split(" ")[0],ref:r.id});
+      }
+      const auth=verifyTok((req.headers.get("authorization")||"").replace(/^Bearer\s+/i,""));
+      if(!auth)return J({error:"Please sign in again."},401);
+      const admin=auth.r==="admin",ref=auth.f;
+      if(!st.open&&!admin)return J({error:"The photo wall is not open yet.",...st},403);
+      const glist=async r=>(await pm.get("g:"+r,{type:"json"}).catch(()=>null))||[];
+
+      if(p==="photos"){
+        const mine=u.searchParams.get("mine")==="1",offset=Math.max(0,+u.searchParams.get("offset")||0),limit=Math.min(100,Math.max(1,+u.searchParams.get("limit")||60));
+        const gl=await glist(ref);
+        let ids;
+        if(mine&&!admin)ids=[...gl].sort();
+        else{const {blobs}=await pm.list({prefix:"m:"});ids=blobs.map(x=>x.key.slice(2)).sort()}   // ids start with an inverted timestamp, so sorted = newest first
+        const metas=(await Promise.all(ids.slice(offset,offset+limit).map(id=>pm.get("m:"+id,{type:"json"}).catch(()=>null)))).filter(Boolean);
+        return J({total:ids.length,items:metas.map(m=>({id:m.id,by:m.by,at:m.at,w:m.w,h:m.h,mine:admin||m.ref===ref})),
+          uploadOpen:st.uploadOpen||admin,me:{role:auth.r,name:auth.n,ref:auth.f,count:gl.length,max:MAX_PHOTOS_PER_GUEST}});
+      }
+      if(p==="photo"&&req.method==="GET"){
+        const id=u.searchParams.get("id")||"",size=u.searchParams.get("size")||"thumb";
+        if(!/^\d{13}-[0-9a-f]{8}$/.test(id)||!["thumb","view","full"].includes(size))return J({error:"Not found"},404);
+        const m=await pm.get("m:"+id,{type:"json"});if(!m)return J({error:"Not found"},404);
+        if(size==="full"&&!admin&&m.ref!==ref)return J({error:"Only the person who took this photo can download it."},403);
+        const buf=await ph.get(size[0]+":"+id,{type:"arrayBuffer"});if(!buf)return J({error:"Not found"},404);
+        const h={"content-type":"image/jpeg","x-content-type-options":"nosniff","cache-control":"private, max-age=3600"};
+        if(size==="full"&&u.searchParams.get("dl")==="1")h["content-disposition"]=`attachment; filename="ArtFullyTee-${id.slice(14)}.jpg"`;
+        return new Response(buf,{headers:h});
+      }
+      if(p==="photo-upload"&&req.method==="POST"){
+        if(!st.uploadOpen&&!admin)return J({error:"Photo uploads are closed."},403);
+        if(await tooMany("photoup",80,600000))return J({error:"Too many uploads. Please wait a few minutes."},429);
+        await hit("photoup",600000);
+        const gl=await glist(ref);
+        if(!admin&&gl.length>=MAX_PHOTOS_PER_GUEST)return J({error:`You have reached the limit of ${MAX_PHOTOS_PER_GUEST} photos.`},400);
+        let fd;try{fd=await req.formData()}catch(e){return J({error:"Bad upload."},400)}
+        const parts={};
+        for(const [k,max] of [["thumb",120e3],["view",700e3],["full",3.2e6]]){
+          const f=fd.get(k);if(!f||typeof f.arrayBuffer!=="function"||f.size>max||f.size<100)return J({error:"Invalid photo."},400);
+          const buf=Buffer.from(await f.arrayBuffer());
+          if(!(buf[0]===0xFF&&buf[1]===0xD8&&buf[2]===0xFF))return J({error:"Only JPEG photos are accepted."},400);
+          parts[k]=buf;
+        }
+        const w=Math.min(8000,Math.max(1,parseInt(fd.get("w"))||1)),h=Math.min(8000,Math.max(1,parseInt(fd.get("h"))||1));
+        const id=String(9e12-Date.now()).padStart(13,"0")+"-"+randomBytes(4).toString("hex");
+        await Promise.all([ph.set("t:"+id,toAB(parts.thumb)),ph.set("v:"+id,toAB(parts.view)),ph.set("f:"+id,toAB(parts.full))]);
+        await pm.setJSON("m:"+id,{id,ref,by:shortName(auth.n),at:new Date().toISOString(),w,h});
+        gl.push(id);await pm.setJSON("g:"+ref,gl);
+        return J({ok:true,id,count:gl.length});
+      }
+      if(p==="photo-delete"&&req.method==="POST"){
+        if(!st.uploadOpen&&!admin)return J({error:"Photos can no longer be deleted."},403);
+        let b={};try{b=JSON.parse(await req.text()||"{}")}catch(e){}
+        const id=String(b.id||"");if(!/^\d{13}-[0-9a-f]{8}$/.test(id))return J({error:"Not found"},404);
+        const m=await pm.get("m:"+id,{type:"json"});if(!m)return J({error:"Not found"},404);
+        if(!admin&&m.ref!==ref)return J({error:"You can only delete your own photos."},403);
+        await Promise.all([ph.delete("t:"+id),ph.delete("v:"+id),ph.delete("f:"+id),pm.delete("m:"+id)]);
+        await pm.setJSON("g:"+m.ref,(await glist(m.ref)).filter(x=>x!==id));
+        return J({ok:true});
+      }
+      return J({error:"Not found"},404);
+    }
     // Order of Program: the server checks the clock, so changing a phone's date or reading the page source does not reveal it early
     if(p==="program-status"||p==="program"){
       let at=new Date(E.PROGRAM_UNLOCK_AT||PROGRAM_UNLOCK);if(isNaN(at))at=new Date(PROGRAM_UNLOCK);

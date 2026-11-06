@@ -22,6 +22,14 @@ export const PROGRAM=[
   {time:"",title:"Reception meal"},
   {time:"",title:"Closing prayer"}
 ];
+// ---- Photo wall ----
+// TESTING: the photo wall is open now. When testing is finished, change PHOTOS_OPEN to "2026-12-05T05:00:00+01:00" (wedding morning).
+export const PHOTOS_OPEN="2020-01-01T00:00:00+01:00";
+export const PHOTOS_UPLOAD_UNTIL="2026-12-06T06:00:00+01:00";  // 6:00 AM on 6 December 2026: guest uploads AND deletions close; viewing and downloading stay open
+export const MAX_PHOTOS_PER_GUEST=5;                           // photos each guest can have on the wall
+// Shared code for guests who did not book a seat on the app. Each person who uses it enters their name and gets their own personal code (GST-XXXXXX).
+// Better kept private: you can also set it as the PHOTO_GUEST_CODE variable in Netlify, which takes priority over this value.
+export const GENERIC_PHOTO_REF="ART-NUZ7EQ";
 export const DATE="Saturday, 5 December 2026";
 export const SIDES=[
 {id:"bride",label:"Bride's Family",groups:[{id:"bf",label:"Bride's Family",tables:T(1,15)}]},
