@@ -14,6 +14,7 @@ const seatsOf=r=>r.seats.map(s=>"T"+s.replace("-"," S")).join(", ");
 const pub=r=>({id:r.id,name:r.name,grouping:r.grouping,category:r.category,tables:tablesOf(r),seats:seatsOf(r),date:DATE,status:r.status});
 const lag=t=>t?new Date(t).toLocaleString("en-NG",{timeZone:"Africa/Lagos"}):"";
 // ---------- Photo wall helpers ----------
+const refCache=new Map();   // remembers "is this reference still valid?" for a few seconds so every photo request does not hit the database
 const photoState=()=>{let o=new Date(E.PHOTOS_OPEN_AT||PHOTOS_OPEN);if(isNaN(o))o=new Date(PHOTOS_OPEN);let u=new Date(E.PHOTOS_UPLOAD_UNTIL_AT||PHOTOS_UPLOAD_UNTIL);if(isNaN(u))u=new Date(PHOTOS_UPLOAD_UNTIL);const n=Date.now();
   return{open:n>=o.getTime(),uploadOpen:n>=o.getTime()&&n<=u.getTime(),openAt:o.toISOString(),uploadUntil:u.toISOString(),now:n}};
 const tokSecret=()=>E.PHOTO_SECRET||("photo|"+(E.ADMIN_KEY||""));
@@ -175,6 +176,16 @@ export default async (req,context)=>{
       const auth=verifyTok((req.headers.get("authorization")||"").replace(/^Bearer\s+/i,""));
       if(!auth)return J({error:"Please sign in again."},401);
       const admin=auth.r==="admin",ref=auth.f;
+      if(!admin){   // a released or cancelled booking loses photo-wall access immediately, even if the guest is still signed in
+        const ttl=Number(E.REF_CACHE_MS??15000),c=refCache.get(ref);let live;
+        if(c&&Date.now()-c.t<ttl)live=c.ok;
+        else{
+          if(/^ART-/.test(ref)){const r=await bk.get("b:"+ref,{type:"json"}).catch(()=>null);live=!!r&&r.status==="confirmed"}
+          else live=!!(await pm.get("w:"+ref,{type:"json"}).catch(()=>null));
+          refCache.set(ref,{ok:live,t:Date.now()});
+        }
+        if(!live)return J({error:"This reference is no longer valid. Please contact the couple if you think this is a mistake.",revoked:true},401);
+      }
       if(!st.open&&!admin)return J({error:"The photo wall is not open yet.",...st},403);
       const glist=async r=>(await pm.get("g:"+r,{type:"json"}).catch(()=>null))||[];
 
@@ -241,7 +252,7 @@ export default async (req,context)=>{
     }
     if(p==="config")return J({SIDES,DATE,MAX_SEATS});
     if(p==="taken"){const {blobs}=await seatS.list({prefix:"s:"});return J(blobs.map(b=>b.key.slice(2)))}
-    if(p==="card"){if(await tooMany("card",60,600000))return J({error:"Too many requests. Please wait a few minutes."},429);await hit("card",600000);const r=await bk.get("b:"+u.searchParams.get("id"),{type:"json"});return r?J(pub(r)):J({error:"Card not found"},404)}
+    if(p==="card"){if(await tooMany("card",600,600000))return J({error:"Too many requests. Please wait a few minutes."},429);await hit("card",600000);const r=await bk.get("b:"+u.searchParams.get("id"),{type:"json"});return r?J(pub(r)):J({error:"Card not found"},404)}
 
     if(p==="book"&&req.method==="POST"){
       if(await tooMany("book",8,600000))return J({error:"Too many attempts. Please wait a few minutes and try again."},429);

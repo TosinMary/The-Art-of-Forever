@@ -23,6 +23,7 @@
       $("mineCard").href = "rsvp.html?card=" + encodeURIComponent(mr.ref); $("minePhoto").href = "photos.html?ref=" + encodeURIComponent(mr.ref);
     }
   } catch (e) {}
+  window.addEventListener("myref-cleared", () => { $("mine").hidden = true; });
   // "Show my reference on this device" (email + phone number it was booked with)
   $("frOpen").onclick = () => { $("frBox").hidden = !$("frBox").hidden; };
   $("frGo").onclick = async () => {

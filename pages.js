@@ -384,3 +384,23 @@ window.showMyRefChip = function () {
   } catch (e) {}
 };
 window.showMyRefChip();
+
+
+/* ---------- Re-check a remembered booking reference (so a released seat stops showing on guests' devices) ---------- */
+(function () {
+  try {
+    const o = JSON.parse(localStorage.getItem("myRef") || "null");
+    if (!o || !/^ART-[A-Z0-9]{6}$/.test(o.ref || "")) return;
+    if (Date.now() - (+localStorage.getItem("myRefChecked") || 0) < 10 * 60 * 1000) return;   // at most every 10 minutes
+    fetch("/api/card?id=" + encodeURIComponent(o.ref), { cache: "no-store" })
+      .then((r) => (r.status === 404 ? { status: "gone" } : r.json()))
+      .then((d) => {
+        if (d && (d.status === "gone" || d.status === "released")) {
+          ["myRef", "myRefChecked", "photoWall"].forEach((k) => localStorage.removeItem(k));
+          const chip = document.querySelector(".myref"); if (chip) chip.remove();
+          window.dispatchEvent(new Event("myref-cleared"));
+        } else if (d && d.status === "confirmed") localStorage.setItem("myRefChecked", String(Date.now()));
+      })
+      .catch(() => {});
+  } catch (e) {}
+})();

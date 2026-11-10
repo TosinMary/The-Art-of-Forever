@@ -206,6 +206,7 @@
         if (window.showMyRefChip) window.showMyRefChip();
       };
       showRef();
+      window.addEventListener("myref-cleared", () => { $("pb-mine").hidden = true; $("pb-open").href = "photos.html"; $("pb-find").textContent = "Find my reference"; });
       fetch("/api/photo-status", { cache: "no-store" }).then((r) => r.json()).then((d) => {
         $("pb-status").textContent = d.open ? "Open now" : "Opens on 5 December 2026";
       }).catch(() => {});

@@ -266,7 +266,7 @@
       $("go2").onclick = go; $("nm").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
     }
 
-    function logout(msg) { S = null; save(null); items = []; closeLB(); thumbs.forEach((u) => URL.revokeObjectURL(u)); thumbs.clear(); document.body.classList.remove("protected", "veil"); boot().then(() => { if (msg && $("m")) $("m").textContent = msg; }); }
+    function logout(msg, revoked) { if (revoked) { try { localStorage.removeItem("myRef"); localStorage.removeItem("myRefChecked"); } catch (e) {} } S = null; save(null); items = []; closeLB(); thumbs.forEach((u) => URL.revokeObjectURL(u)); thumbs.clear(); document.body.classList.remove("protected", "veil"); boot().then(() => { if (msg && $("m")) $("m").textContent = msg; }); }
 
     async function wall() {
       protect();
@@ -297,7 +297,7 @@
       const r = await api(`photos?offset=${items.length}&limit=60${tab === "mine" ? "&mine=1" : ""}`);
       if (my !== gen) return;
       loading = false;
-      if (r.status === 401) return logout("Your session ended. Please sign in again.");
+      if (r.status === 401) return logout(r.d.revoked ? r.d.error : "Your session ended. Please sign in again.", r.d.revoked);
       if (r.status === 403) return boot();
       if (!r.ok) { $("upnote").textContent = r.d.error || "Could not load photos."; return; }
       items = items.concat(r.d.items); total = r.d.total; me = r.d.me; uploadOpen = r.d.uploadOpen;
@@ -413,7 +413,7 @@
           const fd = new FormData();
           fd.append("thumb", thumb.blob, "t.jpg"); fd.append("view", view.blob, "v.jpg"); fd.append("full", full.blob, "f.jpg"); fd.append("w", full.w); fd.append("h", full.h);
           const r = await api("photo-upload", { method: "POST", body: fd });
-          if (r.status === 401) { busy = false; return logout("Your session ended. Please sign in again."); }
+          if (r.status === 401) { busy = false; return logout(r.d.revoked ? r.d.error : "Your session ended. Please sign in again.", r.d.revoked); }
           if (!r.ok) { fail++; lastErr = r.d.error || "Upload failed."; if (r.status === 403 || /limit/i.test(lastErr)) break; } else done++;
         } catch (e) { fail++; lastErr = "That photo could not be read. Please try another."; }
       }
