@@ -92,9 +92,16 @@ async function notifyReleased(r){
 
 export default async (req,context)=>{
   // Send emails/SMS in the background when the platform allows it, so the page doesn't wait for them
-  const later=async(p)=>{if(context&&typeof context.waitUntil==="function"){context.waitUntil(p.catch(e=>console.error(e)));return}await p};
+  const later=async(p)=>{await p};   // wait for the email/SMS to be handed to Brevo/Termii so nothing is lost when the function ends
   const u=new URL(req.url),p=u.pathname.replace(/^\/api\//,"");
   const seatS=getStore("seats"),bk=getStore("bookings"),rl=getStore("ratelimit");
+  const findByEmail=async em=>{
+    const bid=await seatS.get("e:"+em),rec=bid?await bk.get("b:"+bid,{type:"json"}):null;
+    if(rec&&rec.status==="confirmed")return rec;
+    const {blobs}=await bk.list({prefix:"b:"});   // fallback: look through all bookings (covers older bookings made before the index existed)
+    const all=await Promise.all(blobs.map(x=>bk.get(x.key,{type:"json"}).catch(()=>null)));
+    return all.find(r=>r&&r.status==="confirmed"&&String(r.email).toLowerCase()===em)||null;
+  };
   // Simple per-visitor rate limiting (stops password guessing and booking spam)
   const ip=String((context&&context.ip)||req.headers.get("x-nf-client-connection-ip")||"unknown").replace(/[^\w.:-]/g,"_");
   const tooMany=async(bucket,max,win)=>{const r=await rl.get(bucket+":"+ip,{type:"json"}).catch(()=>null);return !!r&&Date.now()-r.t<win&&r.n>=max};
@@ -110,7 +117,7 @@ export default async (req,context)=>{
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)||phn.length<12)return J({error:fail},404);
       const fk="findref:"+em;let f=await rl.get(fk,{type:"json"}).catch(()=>null);
       if(f&&Date.now()-f.t<3600000&&f.n>=5)return J({error:"Too many attempts for this email. Please wait an hour, or use \"Email my access card again\"."},429);
-      const bid=await seatS.get("e:"+em),rec=bid?await bk.get("b:"+bid,{type:"json"}):null;
+      const rec=await findByEmail(em);
       if(rec&&rec.status==="confirmed"&&ng(rec.phone)===phn)return J({ok:true,ref:rec.id,name:String(rec.name).split(" ")[0],category:rec.category,table:tablesOf(rec)});
       f=(!f||Date.now()-f.t>=3600000)?{n:0,t:Date.now()}:f;f.n++;await rl.setJSON(fk,f).catch(()=>{});
       return J({error:fail},404);
@@ -122,7 +129,8 @@ export default async (req,context)=>{
       let b={};try{b=JSON.parse(await req.text()||"{}")}catch(e){}
       const em=clean2(b.email,120).toLowerCase();
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em))return J({error:"Please enter a valid email address."},400);
-      const bid=await seatS.get("e:"+em),rec=bid?await bk.get("b:"+bid,{type:"json"}):null;
+      const rec=await findByEmail(em);
+      console.log("resend-card: "+(rec?"confirmed booking found":"no confirmed booking found for that email"));
       if(rec&&rec.status==="confirmed"){
         const last=await rl.get("resend:"+em,{type:"json"}).catch(()=>null);
         if(!last||Date.now()-last.t>300000){

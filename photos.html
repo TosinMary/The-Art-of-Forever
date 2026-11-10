@@ -211,8 +211,12 @@
             <label for="ref">Your reference</label><input id="ref" placeholder="ART-XXXXXX" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(prefill)}">
             <button class="btn btn-primary" style="margin-top:1rem;width:100%" id="go">Open photo wall</button><p class="msg" id="m"></p>
             <p style="font-size:.85rem"><b>Booked a seat?</b> Use the reference on your access card (like ART-ZMLPYY). It is also in your access card email.<br><b>No seat booked on the app?</b> Use the guest code the couple gave you.</p>
-            <button class="linkbtn" id="forgot">Forgot your reference? Email it to me</button>
-            <div id="fbox" hidden><label for="fem">Email you booked with</label><div class="row"><input id="fem" type="email" autocomplete="email"><button class="btn btn-outline btn-sm" id="fgo" type="button">Send</button></div><p class="msg" id="fm"></p></div>
+            <button class="linkbtn" id="forgot">Forgot your reference?</button>
+            <div id="fbox" hidden><p style="font-size:.85rem">Enter the email and phone number you booked with.</p>
+              <label for="fem">Email</label><input id="fem" type="email" autocomplete="email">
+              <label for="fph">Phone number</label><input id="fph" type="tel" autocomplete="tel" placeholder="080...">
+              <div style="display:flex;gap:.5rem;margin-top:.8rem;flex-wrap:wrap"><button class="btn btn-primary btn-sm" id="fshow" type="button">Show my reference</button><button class="btn btn-outline btn-sm" id="fgo" type="button">Email it to me</button></div>
+              <p class="msg" id="fm"></p></div>
             <div><button class="linkbtn" id="couple">Couple login</button></div></div>`;
       const go = async (name) => {
         $("go").disabled = true; $("m").textContent = "";
@@ -229,6 +233,14 @@
       else {
         $("couple").onclick = () => login(true);
         $("forgot").onclick = () => { $("fbox").hidden = !$("fbox").hidden; };
+        $("fshow").onclick = async () => {
+          $("fshow").disabled = true; $("fm").style.color = ""; $("fm").textContent = "";
+          const r = await api("find-reference", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: $("fem").value, phone: $("fph").value }) });
+          $("fshow").disabled = false;
+          if (!r.ok) { $("fm").textContent = r.d.error || "Could not find your booking."; return; }
+          rememberRef(r.d.ref, r.d.name); $("ref").value = r.d.ref;
+          $("fm").style.color = "#1f8a55"; $("fm").innerHTML = "Your reference is <b>" + esc(r.d.ref) + "</b>. It is filled in above. Tap <b>Open photo wall</b>.";
+        };
         $("fgo").onclick = async () => {
           $("fgo").disabled = true; $("fm").style.color = ""; $("fm").textContent = "";
           const r = await api("resend-card", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: $("fem").value }) });
