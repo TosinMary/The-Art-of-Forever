@@ -23,6 +23,18 @@
       $("mineCard").href = "rsvp.html?card=" + encodeURIComponent(mr.ref); $("minePhoto").href = "photos.html?ref=" + encodeURIComponent(mr.ref);
     }
   } catch (e) {}
+  // "Show my reference on this device" (email + phone number it was booked with)
+  $("frOpen").onclick = () => { $("frBox").hidden = !$("frBox").hidden; };
+  $("frGo").onclick = async () => {
+    $("frGo").disabled = true; $("frMsg").textContent = ""; $("frMsg").style.color = "";
+    const r = await api("find-reference", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: $("frEmail").value, phone: $("frPhone").value }) });
+    $("frGo").disabled = false;
+    if (!r.ok) { $("frMsg").textContent = r.d.error || "Could not find your booking."; return; }
+    try { localStorage.setItem("myRef", JSON.stringify({ ref: r.d.ref, name: r.d.name })); } catch (e) {}
+    $("mine").hidden = false; $("mineRef").textContent = r.d.ref;
+    $("mineCard").href = "rsvp.html?card=" + encodeURIComponent(r.d.ref); $("minePhoto").href = "photos.html?ref=" + encodeURIComponent(r.d.ref);
+    $("frBox").hidden = true; $("mine").scrollIntoView({ behavior: "smooth", block: "center" });
+  };
   // "Email my access card again" (sent only to the address it was booked with)
   $("rsOpen").onclick = () => { $("rsBox").hidden = !$("rsBox").hidden; };
   $("rsGo").onclick = async () => {

@@ -20,7 +20,8 @@ Wedding website with **seat booking, emailed access cards, an admin dashboard wi
 | Admin dashboard | See all bookings, release a seat, free stuck seats, download an Excel sheet |
 | Check-in scanner | Ushers scan the QR in the guest's email. Green = valid, red = used or invalid |
 | Photo Wall | Guests sign in with the reference on their access card (or the shared guest code if they did not book a seat), take or upload up to 5 photos, and scroll through everyone's photos. Each guest can download only their own. The couple can view, download and delete all. Uploads and deletions close at 6:00 AM on 6 December 2026 |
-| My reference | After booking, the guest's reference is shown on their card, remembered on their phone (a small "My reference" chip on every page), and can be emailed again from the RSVP page |
+| My reference | After booking, the guest's reference is shown on their card and remembered on that device (a small "My reference" tag on every page). On any other phone or computer the guest enters the email and phone number they booked with (home page or RSVP page) to bring it back, or has the card emailed again. Opening the "View card online" link from the email also restores it |
+| Photo Wall banner | A clear Photo Wall section on the home page explains how to get in (reference, guest code, or find your reference) |
 | Order of Program | A page guests can open only from 5:00 AM on 5 December 2026. The server checks the time, so it cannot be opened early by changing a phone's clock |
 | Notifications | You get an email for every booking and every release |
 
@@ -116,6 +117,7 @@ ArtfullyTee/
 | `GET /api/config` | Public | Seating layout and date |
 | `GET /api/taken` | Public | List of booked seats |
 | `POST /api/photo-login` | Public | Sign in with a card reference, a personal GST code, the shared guest code plus a name, or the admin key |
+| `POST /api/find-reference` | Public | Returns the reference when the email AND phone number match a confirmed booking (5 wrong tries per email per hour) |
 | `POST /api/resend-card` | Public | Email the access card again to the address it was booked with (same reply whether or not a booking exists) |
 | `GET /api/photos` | Signed in | List photos (newest first, 60 at a time, `?mine=1` for own photos) |
 | `GET /api/photo?id=...&size=thumb\|view\|full` | Signed in | Photo image. `full` (download) only for the owner or the couple |

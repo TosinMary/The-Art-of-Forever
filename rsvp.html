@@ -72,8 +72,12 @@
         <div class="tables" id="tables"></div></div>
       <div class="bar" id="bar" hidden><span id="sum"></span><button class="btn btn-primary" id="go" disabled>Confirm &amp; get my access card</button></div>
       <p class="err" id="err" role="alert"></p>
-      <div class="box" id="resend"><h2>Already booked?</h2><p style="color:var(--muted);margin:0">Lost your reference? We will email your access card again.</p>
-        <button class="linkbtn" id="rsOpen" type="button">Email my access card again</button>
+      <div class="box" id="resend"><h2>Already booked?</h2><p style="color:var(--muted);margin:0">Using a different phone or computer? Get your reference back here.</p>
+        <div><button class="linkbtn" id="frOpen" type="button">Show my reference on this device</button></div>
+        <div id="frBox" hidden><label for="frEmail">Email you booked with</label><input id="frEmail" type="email" autocomplete="email">
+          <label for="frPhone">Phone number you booked with</label><input id="frPhone" type="tel" autocomplete="tel" placeholder="080...">
+          <button class="btn btn-primary" id="frGo" type="button" style="margin-top:.8rem">Show my reference</button><p id="frMsg" style="margin:.6rem 0 0;color:#c0392b"></p></div>
+        <div style="margin-top:.5rem"><button class="linkbtn" id="rsOpen" type="button">Email my access card again</button></div>
         <div id="rsBox" hidden><label for="rsEmail">Email you booked with</label><div style="display:flex;gap:.5rem"><input id="rsEmail" type="email" autocomplete="email"><button class="btn btn-outline" id="rsGo" type="button">Send</button></div><p id="rsMsg" style="margin:.6rem 0 0;color:#c0392b"></p></div></div>
     </div>
 

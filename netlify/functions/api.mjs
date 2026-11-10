@@ -101,6 +101,20 @@ export default async (req,context)=>{
   const hit=async(bucket,win)=>{const k=bucket+":"+ip;let r=await rl.get(k,{type:"json"}).catch(()=>null);const now=Date.now();if(!r||now-r.t>=win)r={n:0,t:now};r.n++;await rl.setJSON(k,r).catch(()=>{})};
   try{
     // ===== Photo wall: everyone with a valid card can view; only the owner (or the couple) can download the full-size photo =====
+    // "Show my reference on this device": the guest proves it is them with the email AND phone number they booked with
+    if(p==="find-reference"&&req.method==="POST"){
+      if(await tooMany("findref",10,3600000))return J({error:"Too many attempts. Please try again in an hour."},429);
+      await hit("findref",3600000);
+      let b={};try{b=JSON.parse(await req.text()||"{}")}catch(e){}
+      const em=clean2(b.email,120).toLowerCase(),phn=ng(clean2(b.phone,20)),fail="We could not match those details. Please use the same email and phone number you booked with.";
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)||phn.length<12)return J({error:fail},404);
+      const fk="findref:"+em;let f=await rl.get(fk,{type:"json"}).catch(()=>null);
+      if(f&&Date.now()-f.t<3600000&&f.n>=5)return J({error:"Too many attempts for this email. Please wait an hour, or use \"Email my access card again\"."},429);
+      const bid=await seatS.get("e:"+em),rec=bid?await bk.get("b:"+bid,{type:"json"}):null;
+      if(rec&&rec.status==="confirmed"&&ng(rec.phone)===phn)return J({ok:true,ref:rec.id,name:String(rec.name).split(" ")[0],category:rec.category,table:tablesOf(rec)});
+      f=(!f||Date.now()-f.t>=3600000)?{n:0,t:Date.now()}:f;f.n++;await rl.setJSON(fk,f).catch(()=>{});
+      return J({error:fail},404);
+    }
     // "I lost my reference": email the access card again to the address it was booked with (never shows it on screen)
     if(p==="resend-card"&&req.method==="POST"){
       if(await tooMany("resend",5,3600000))return J({error:"Too many requests. Please try again in an hour."},429);

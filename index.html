@@ -19,6 +19,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .photo-banner { max-width: var(--max); margin: 0 auto; padding: 0 clamp(1rem, 4vw, 3rem) 3rem; }
+    .pb-inner { background: var(--blush); border: 1px solid var(--gold); border-radius: var(--radius); padding: clamp(1.4rem, 4vw, 2.2rem); display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.6rem; align-items: center; }
+    .pb-inner h2 { margin: 0 0 .4rem; }
+    .pb-inner p { margin: .3rem 0; color: var(--muted); }
+    .pb-status { display: inline-block; margin-bottom: .6rem; padding: .25rem .8rem; border-radius: 999px; background: var(--white); border: 1px solid var(--gold); font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--rose-dark); }
+    .pb-how { background: var(--white); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; }
+    .pb-how h3 { margin: 0 0 .5rem; font-family: var(--font-display); font-size: 1.3rem; font-weight: 500; }
+    .pb-how ol { margin: 0; padding-left: 1.2rem; color: var(--muted); }
+    .pb-how li { margin: .45rem 0; } .pb-how li b { color: var(--ink); }
+    .pb-ref { margin: .8rem 0 0; padding: .6rem .9rem; background: var(--white); border: 1px dashed var(--gold); border-radius: 10px; color: var(--ink); }
+    .pb-ref b { letter-spacing: .08em; color: var(--rose-dark); }
+    .pb-form label { display: block; margin: .7rem 0 .25rem; font-size: .88rem; color: var(--muted); }
+    .pb-form input { width: 100%; min-height: 46px; padding: 0 .9rem; font: inherit; font-size: 16px; color: var(--ink); background: var(--white); border: 1px solid var(--line-strong); border-radius: 10px; }
+    .pb-msg { margin: .6rem 0 0; color: #c0392b; min-height: 1.1em; }
+    @media (max-width: 860px) { .pb-inner { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
 
@@ -71,6 +88,37 @@
       <figure class="hero-photo" id="hero-carousel">
         <img src="./images/Pic 1.jpeg" alt="Tosin and Raphael" />
       </figure>
+    </section>
+
+    <!-- ===== PHOTO WALL ===== -->
+    <section class="photo-banner" id="photo-banner" aria-labelledby="pb-title">
+      <div class="pb-inner">
+        <div>
+          <span class="pb-status" id="pb-status">Opens on 5 December 2026</span>
+          <h2 id="pb-title">Photo Wall</h2>
+          <p>Take pictures at the wedding and see everyone's moments in one place. Share up to 5 photos of your own, and download your own pictures.</p>
+          <div class="pb-ref" id="pb-mine" hidden>Your reference: <b id="pb-ref"></b> <span style="color:var(--muted)">(also on your access card)</span></div>
+          <div class="cta-row">
+            <a class="btn btn-primary" id="pb-open" href="photos.html">Open the Photo Wall</a>
+            <button class="btn btn-outline" id="pb-find" type="button">Find my reference</button>
+          </div>
+          <div class="pb-form" id="pb-form" hidden>
+            <p>Booked a seat on another phone or computer? Enter the details you booked with to see your reference here.</p>
+            <label for="pb-email">Email</label><input id="pb-email" type="email" autocomplete="email">
+            <label for="pb-phone">Phone number</label><input id="pb-phone" type="tel" autocomplete="tel" placeholder="080...">
+            <button class="btn btn-primary" id="pb-go" type="button" style="margin-top:.9rem">Show my reference</button>
+            <p class="pb-msg" id="pb-msg" role="alert"></p>
+          </div>
+        </div>
+        <div class="pb-how">
+          <h3>How to get in</h3>
+          <ol>
+            <li><b>Booked a seat?</b> Sign in with the reference on your access card (like ART-ZMLPYY).</li>
+            <li><b>No seat booked on the app?</b> Ask the couple for the guest code.</li>
+            <li><b>Lost your reference?</b> Tap "Find my reference" or get your card emailed again on the <a class="text-link" href="rsvp.html">RSVP page</a>.</li>
+          </ol>
+        </div>
+      </div>
     </section>
 
     <!-- ===== GALLERY PREVIEW ===== -->
@@ -143,6 +191,36 @@
       const t = document.getElementById("program-text"), l = document.getElementById("program-link");
       if (d.unlocked) { t.textContent = "The order of program for today is now available."; l.textContent = "View the program"; }
     }).catch(() => {});
+    // ----- Photo Wall banner -----
+    (function () {
+      const $ = (id) => document.getElementById(id);
+      const showRef = () => {
+        try {
+          const o = JSON.parse(localStorage.getItem("myRef") || "null");
+          if (o && /^(ART|GST)-[A-Z0-9]{6}$/.test(o.ref || "")) {
+            $("pb-mine").hidden = false; $("pb-ref").textContent = o.ref;
+            $("pb-open").href = "photos.html?ref=" + encodeURIComponent(o.ref);
+            $("pb-find").textContent = "Not you? Find a different reference";
+          }
+        } catch (e) {}
+        if (window.showMyRefChip) window.showMyRefChip();
+      };
+      showRef();
+      fetch("/api/photo-status", { cache: "no-store" }).then((r) => r.json()).then((d) => {
+        $("pb-status").textContent = d.open ? "Open now" : "Opens on 5 December 2026";
+      }).catch(() => {});
+      $("pb-find").onclick = () => { $("pb-form").hidden = !$("pb-form").hidden; };
+      $("pb-go").onclick = async () => {
+        $("pb-go").disabled = true; $("pb-msg").textContent = "";
+        try {
+          const r = await fetch("/api/find-reference", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: $("pb-email").value, phone: $("pb-phone").value }) });
+          const d = await r.json();
+          if (!r.ok) { $("pb-msg").textContent = d.error || "We could not find your booking."; }
+          else { try { localStorage.setItem("myRef", JSON.stringify({ ref: d.ref, name: d.name })); } catch (e) {} $("pb-form").hidden = true; showRef(); }
+        } catch (e) { $("pb-msg").textContent = "No connection. Please try again."; }
+        $("pb-go").disabled = false;
+      };
+    })();
   </script>
 </body>
 </html>
