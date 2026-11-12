@@ -27,6 +27,8 @@ const clean2=(v,max)=>String(v??"").replace(/[\u0000-\u001f\u007f<>]/g,"").trim(
 const code6=()=>Array.from({length:6},()=>"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[randomInt(32)]).join("");
 const normRef=t=>{let id=String(t||"").split("|")[0].trim().toUpperCase().replace(/\s+/g,"");
   if(/^ART-[A-Z0-9]{6}$/.test(id)||/^GST-[A-Z0-9]{6}$/.test(id))return id;if(/^[A-Z0-9]{6}$/.test(id))return"ART-"+id;if(/^ART[A-Z0-9]{6}$/.test(id))return"ART-"+id.slice(3);return id};
+// Anonymous per-guest tag shown on the photo wall instead of names. It cannot be turned back into a reference or a name by guests, only the couple can look it up.
+const tagOf=ref=>{const h=createHmac("sha256",tokSecret()).update("tag|"+ref).digest();let s="";for(let i=0;i<5;i++)s+="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[h[i]%32];return s};
 const shortName=n=>{const w=String(n||"Guest").trim().split(/\s+/);return w.length>1?w[0]+" "+w[w.length-1][0]+".":w[0]};
 const toAB=b=>b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);
 const site=()=>E.URL||"https://artfullytee-tosinraphael.netlify.app";
@@ -195,9 +197,17 @@ export default async (req,context)=>{
         let ids;
         if(mine&&!admin)ids=[...gl].sort();
         else{const {blobs}=await pm.list({prefix:"m:"});ids=blobs.map(x=>x.key.slice(2)).sort()}   // ids start with an inverted timestamp, so sorted = newest first
-        const metas=(await Promise.all(ids.slice(offset,offset+limit).map(id=>pm.get("m:"+id,{type:"json"}).catch(()=>null)))).filter(Boolean);
-        return J({total:ids.length,items:metas.map(m=>({id:m.id,by:m.by,at:m.at,w:m.w,h:m.h,mine:admin||m.ref===ref})),
-          uploadOpen:st.uploadOpen||admin,me:{role:auth.r,name:auth.n,ref:auth.f,count:gl.length,max:MAX_PHOTOS_PER_GUEST}});
+        const q=admin?String(u.searchParams.get("q")||"").trim().toLowerCase().slice(0,60):"";
+        let metas,totalN=ids.length;
+        if(q){   // couple search by name, reference or tag
+          const everything=(await Promise.all(ids.map(id=>pm.get("m:"+id,{type:"json"}).catch(()=>null)))).filter(Boolean);
+          const found=everything.filter(m=>[m.name||m.by,m.ref,tagOf(m.ref)].some(v=>String(v||"").toLowerCase().includes(q)));
+          totalN=found.length;metas=found.slice(offset,offset+limit);
+        }else metas=(await Promise.all(ids.slice(offset,offset+limit).map(id=>pm.get("m:"+id,{type:"json"}).catch(()=>null)))).filter(Boolean);
+        return J({total:totalN,
+          items:metas.map(m=>admin?{id:m.id,tag:tagOf(m.ref),name:m.name||m.by||"",ref:m.ref,at:m.at,w:m.w,h:m.h,mine:true}
+                                  :{id:m.id,tag:tagOf(m.ref),at:m.at,w:m.w,h:m.h,mine:m.ref===ref}),   // guests never receive names or references of others
+          uploadOpen:st.uploadOpen||admin,me:{role:auth.r,name:auth.n,ref:auth.f,tag:tagOf(ref),count:gl.length,max:MAX_PHOTOS_PER_GUEST}});
       }
       if(p==="photo"&&req.method==="GET"){
         const id=u.searchParams.get("id")||"",size=u.searchParams.get("size")||"thumb";
@@ -226,7 +236,7 @@ export default async (req,context)=>{
         const w=Math.min(8000,Math.max(1,parseInt(fd.get("w"))||1)),h=Math.min(8000,Math.max(1,parseInt(fd.get("h"))||1));
         const id=String(9e12-Date.now()).padStart(13,"0")+"-"+randomBytes(4).toString("hex");
         await Promise.all([ph.set("t:"+id,toAB(parts.thumb)),ph.set("v:"+id,toAB(parts.view)),ph.set("f:"+id,toAB(parts.full))]);
-        await pm.setJSON("m:"+id,{id,ref,by:shortName(auth.n),at:new Date().toISOString(),w,h});
+        await pm.setJSON("m:"+id,{id,ref,name:clean2(auth.n,60),by:shortName(auth.n),at:new Date().toISOString(),w,h});
         gl.push(id);await pm.setJSON("g:"+ref,gl);
         return J({ok:true,id,count:gl.length});
       }
