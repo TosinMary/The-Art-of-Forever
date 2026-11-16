@@ -388,19 +388,26 @@ window.showMyRefChip();
 
 /* ---------- Re-check a remembered booking reference (so a released seat stops showing on guests' devices) ---------- */
 (function () {
-  try {
-    const o = JSON.parse(localStorage.getItem("myRef") || "null");
-    if (!o || !/^ART-[A-Z0-9]{6}$/.test(o.ref || "")) return;
-    if (Date.now() - (+localStorage.getItem("myRefChecked") || 0) < 10 * 60 * 1000) return;   // at most every 10 minutes
-    fetch("/api/card?id=" + encodeURIComponent(o.ref), { cache: "no-store" })
-      .then((r) => (r.status === 404 ? { status: "gone" } : r.json()))
-      .then((d) => {
-        if (d && (d.status === "gone" || d.status === "released")) {
-          ["myRef", "myRefChecked", "photoWall"].forEach((k) => localStorage.removeItem(k));
-          const chip = document.querySelector(".myref"); if (chip) chip.remove();
-          window.dispatchEvent(new Event("myref-cleared"));
-        } else if (d && d.status === "confirmed") localStorage.setItem("myRefChecked", String(Date.now()));
-      })
-      .catch(() => {});
-  } catch (e) {}
+  function recheck() {
+    try {
+      const o = JSON.parse(localStorage.getItem("myRef") || "null");
+      if (!o || !/^ART-[A-Z0-9]{6}$/.test(o.ref || "")) return;
+      if (Date.now() - (+localStorage.getItem("myRefChecked") || 0) < 60 * 1000) return;   // at most once a minute
+      localStorage.setItem("myRefChecked", String(Date.now()));
+      fetch("/api/card?id=" + encodeURIComponent(o.ref), { cache: "no-store" })
+        .then((r) => (r.status === 404 ? { status: "gone" } : r.json()))
+        .then((d) => {
+          if (d && ["gone", "released", "uninvited", "declined"].includes(d.status)) {
+            ["myRef", "myRefChecked", "photoWall"].forEach((k) => localStorage.removeItem(k));
+            const chip = document.querySelector(".myref"); if (chip) chip.remove();
+            window.dispatchEvent(new Event("myref-cleared"));
+          }
+        })
+        .catch(() => {});
+    } catch (e) {}
+  }
+  recheck();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) recheck(); });
+  window.addEventListener("focus", recheck);
+  setInterval(() => { if (!document.hidden) recheck(); }, 60 * 1000);
 })();

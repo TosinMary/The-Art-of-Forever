@@ -8,10 +8,34 @@
     $("app").hidden = true; $("cardWrap").hidden = false;
     $("cn").textContent = c.name; $("cg").textContent = c.grouping; $("cc").textContent = c.category;
     $("ct").textContent = c.tables; $("cd").textContent = c.date; $("ci").textContent = c.id;
-    if (c.status === "released") $("cnote").textContent = "This card is no longer valid. Please rebook your seat.";
+    const pend = c.status === "pending", decl = c.status === "declined";
+    $("ch").textContent = pend ? "Seat request received" : decl ? "Request not approved" : "Access Card";
+    if (pend || decl) {
+      $("qr").style.display = "none"; $("ci").style.display = "none";
+      document.querySelectorAll(".photo-note").forEach((n) => { n.style.display = "none"; });
+      $("cnote").textContent = pend
+        ? "Your seat is being held while the couple confirm that you are an invited guest. Your access card will be emailed to you (and sent by SMS) once it is approved. You can come back to this page to check."
+        : "Sorry, your request was not approved because you are not an approved invited guest. Please contact the couple for more information.";
+      try { pend ? localStorage.setItem("myPending", JSON.stringify({ ref: c.id })) : localStorage.removeItem("myPending"); } catch (e) {}
+      if (pend && $("mailhint")) $("mailhint").innerHTML = "<b>Check your email.</b> We have emailed you to confirm your request. If you cannot find it, look in <b>Promotions</b> or <b>Spam</b>.";
+      else if ($("mailhint")) $("mailhint").style.display = "none";
+    }
+    if (c.status === "uninvited") {
+      $("ch").textContent = "Reservation cancelled";
+      $("qr").style.display = "none"; $("ci").style.textDecoration = "line-through"; $("card").style.opacity = ".7";
+      document.querySelectorAll(".photo-note").forEach((n) => { n.style.display = "none"; });
+      if ($("mailhint")) $("mailhint").style.display = "none";
+      $("cnote").textContent = "This reservation is no longer valid because you are not an approved invited guest. Please contact the couple for approval.";
+      try { localStorage.removeItem("myRef"); } catch (e) {}
+    }
+    if (c.status === "released") {
+      $("cnote").textContent = "This reference is no longer valid. Please rebook your seat or contact the couple.";
+      $("qr").style.display = "none"; document.querySelectorAll(".photo-note").forEach((n) => { n.style.display = "none"; });
+      $("ci").style.textDecoration = "line-through"; $("card").style.opacity = ".7";
+    }
     $("qr").innerHTML = ""; new QRCode($("qr"), { text: c.id + "|" + c.name, width: 160, height: 160 });
     if ($("photoLink")) $("photoLink").href = "photos.html?ref=" + encodeURIComponent(c.id);
-    if (c.status !== "released") { try { localStorage.setItem("myRef", JSON.stringify({ ref: c.id, name: c.name })); } catch (e) {} }
+    if (c.status === "confirmed") { try { localStorage.removeItem("myPending"); localStorage.setItem("myRef", JSON.stringify({ ref: c.id, name: c.name })); } catch (e) {} }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -24,6 +48,18 @@
     }
   } catch (e) {}
   window.addEventListener("myref-cleared", () => { $("mine").hidden = true; });
+  // Returning guest who has a request waiting: show where it stands
+  (async () => {
+    try {
+      const mp = JSON.parse(localStorage.getItem("myPending") || "null");
+      if (!mp || !/^ART-/.test(mp.ref) || new URLSearchParams(location.search).get("card")) return;
+      const r = await fetch("/api/card?id=" + encodeURIComponent(mp.ref), { cache: "no-store" }); if (!r.ok && r.status !== 404) return;
+      const d = r.status === 404 ? { status: "gone" } : await r.json(), box = $("pendingNote");
+      if (d.status === "pending") { box.hidden = false; box.innerHTML = "<b>Your seat request is waiting for the couple's approval.</b><br>Request reference " + d.id + ". Your access card will be emailed once it is approved. <a class=\"text-link\" href=\"rsvp.html?card=" + encodeURIComponent(d.id) + "\">View my request</a>"; }
+      else if (d.status === "confirmed") { localStorage.removeItem("myPending"); localStorage.setItem("myRef", JSON.stringify({ ref: d.id, name: (d.name || "").split(" ")[0] })); $("mine").hidden = false; $("mineRef").textContent = d.id; $("mineCard").href = "rsvp.html?card=" + encodeURIComponent(d.id); $("minePhoto").href = "photos.html?ref=" + encodeURIComponent(d.id); if (window.showMyRefChip) window.showMyRefChip(); }
+      else { localStorage.removeItem("myPending"); if (d.status === "declined") { box.hidden = false; box.innerHTML = "<b>Your last seat request was not approved.</b><br>Please contact the couple for more information."; } }
+    } catch (e) {}
+  })();
   // "Show my reference on this device" (email + phone number it was booked with)
   $("frOpen").onclick = () => { $("frBox").hidden = !$("frBox").hidden; };
   $("frGo").onclick = async () => {
@@ -52,6 +88,9 @@
   }
 
   const c = await api("config"); cfg = c.d;
+  const reqText = cfg.REQUIRE_APPROVAL ? "Request my seat" : "Confirm & get my access card";
+  $("go").textContent = reqText;
+  if (cfg.REQUIRE_APPROVAL) { const ld = $("lead"); if (ld) ld.textContent = "Choose your group and seat. The couple will confirm your invitation, then your access card is sent to you by email and SMS. Saturday, 5 December 2026."; }
   const maxSeats = cfg.MAX_SEATS || 1;
   $("seatBox").querySelector("h2").textContent = maxSeats === 1 ? "3. Pick your seat" : "3. Pick your seat(s)";
   $("seatBox").querySelector(".legend").insertAdjacentHTML("beforebegin", `<p style="margin:0 0 .6rem;color:var(--muted)">Each guest can book ${maxSeats === 1 ? "one seat" : "up to " + maxSeats + " seats"}.</p>`);
@@ -110,7 +149,7 @@
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ website: $("website") ? $("website").value : "", name: $("name").value, email: $("email").value, phone: $("phone").value, groupId: grp().id, seats: [...picked] }),
     });
-    $("go").textContent = "Confirm & get my access card";
+    $("go").textContent = reqText;
     if (r.ok) return showCard(r.d.booking);
     if (r.status === 429) { $("go").disabled = false; }
     $("err").textContent = r.d.error || "Something went wrong.";

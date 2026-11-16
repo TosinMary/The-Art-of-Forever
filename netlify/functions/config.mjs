@@ -1,6 +1,7 @@
 const T=(a,b,s=10)=>Array.from({length:b-a+1},(_,i)=>({n:a+i,seats:s}));
 // ---- Booking rules (change these any time) ----
 export const MAX_SEATS=1;              // seats one guest may book in a single booking
+export const REQUIRE_APPROVAL=false;     // false = seats are confirmed instantly and the access card is emailed at once (you can later release an uninvited guest). true = requests are HELD until you approve them
 export const ONE_BOOKING_PER_GUEST=true; // true = the same email or phone number cannot book again
 // ---- Order of Program (only released to guests from the unlock time) ----
 // 5:00 AM Nigerian time on the wedding day. Format: YYYY-MM-DDTHH:MM:SS+01:00 (+01:00 = Nigeria)

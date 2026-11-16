@@ -1,7 +1,7 @@
 import {getStore} from "@netlify/blobs";
 import {timingSafeEqual,randomInt,randomBytes,createHmac} from "node:crypto";
 import ExcelJS from "exceljs";
-import {SIDES,DATE,MAX_SEATS,ONE_BOOKING_PER_GUEST,PROGRAM,PROGRAM_UNLOCK,PHOTOS_OPEN,PHOTOS_UPLOAD_UNTIL,MAX_PHOTOS_PER_GUEST,GENERIC_PHOTO_REF,findGroup} from "./config.mjs";
+import {SIDES,DATE,MAX_SEATS,ONE_BOOKING_PER_GUEST,REQUIRE_APPROVAL,PROGRAM,PROGRAM_UNLOCK,PHOTOS_OPEN,PHOTOS_UPLOAD_UNTIL,MAX_PHOTOS_PER_GUEST,GENERIC_PHOTO_REF,findGroup} from "./config.mjs";
 
 export const config={path:"/api/*"};
 const E=process.env;
@@ -33,12 +33,31 @@ const shortName=n=>{const w=String(n||"Guest").trim().split(/\s+/);return w.leng
 const toAB=b=>b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);
 const site=()=>E.URL||"https://artfullytee-tosinraphael.netlify.app";
 
-async function email(to,subject,html){
+const htmlToText=h=>String(h).replace(/<style[\s\S]*?<\/style>/gi," ").replace(/<br\s*\/?>|<\/p>|<\/tr>|<\/h\d>/gi,"\n").replace(/<[^>]+>/g," ").replace(/&amp;/g,"&").replace(/&#8217;|&rsquo;/g,"\u2019").replace(/&middot;/g,"\u00b7").replace(/&nbsp;/g," ").replace(/&#?\w+;/g," ").replace(/[ \t]+/g," ").replace(/\n\s*/g,"\n").trim();
+// Subject and plain-text copy of the access card (a plain-text part and a clear "booking confirmed" subject help the email look like a receipt, not an advert)
+const cardSubject=r=>`Seat confirmed: Table ${tablesOf(r)} \u00b7 Ref ${r.id} \u00b7 Tosin & Raphael\u2019s Wedding`;
+const cardText=r=>`Hello ${r.name},
+
+Your seat for Tosin & Raphael's wedding is confirmed.
+
+Name: ${r.name}
+Group: ${r.grouping}
+Category: ${r.category}
+Table: ${tablesOf(r)}
+Date: ${DATE}
+Reference: ${r.id}
+
+Show your access card (the QR code in this email) at the entrance. View it online: ${site()}/rsvp.html?card=${r.id}
+
+Your reference ${r.id} is also your Photo Wall code. On the wedding day you can use it to take photos and see everyone's pictures: ${site()}/photos.html?ref=${r.id}
+
+Please keep this email. If it landed in Promotions or Spam, move it to your Primary inbox.`;
+async function email(to,subject,html,text){
   if(!E.BREVO_API_KEY||!E.SENDER_EMAIL){console.error("EMAIL SKIPPED: BREVO_API_KEY or SENDER_EMAIL is missing");return}
   if(!to){console.error("EMAIL SKIPPED: no recipient");return}
   const r=await fetch("https://api.brevo.com/v3/smtp/email",{method:"POST",
     headers:{"api-key":E.BREVO_API_KEY,"content-type":"application/json"},
-    body:JSON.stringify({sender:{name:E.SENDER_NAME||"Tosin & Raphael’s Wedding",email:E.SENDER_EMAIL},to:[{email:to}],subject,htmlContent:html})});
+    body:JSON.stringify({sender:{name:E.SENDER_NAME||"Tosin & Raphael’s Wedding",email:E.SENDER_EMAIL},to:[{email:to}],subject,htmlContent:html,textContent:text||htmlToText(html),...(E.ADMIN_EMAIL?{replyTo:{email:E.ADMIN_EMAIL}}:{}),tags:["wedding"]})});
   if(!r.ok)console.error("BREVO ERROR",r.status,await r.text());else console.log("EMAIL SENT to",to);
 }
 function ng(p){p=p.replace(/\D/g,"");return p.startsWith("234")?p:"234"+p.replace(/^0/,"")}
@@ -78,12 +97,45 @@ const cardHtml=r=>{
 </table></td></tr></table></td></tr></table></body></html>`;
 };
 
-async function notifyBooked(r){
+const needApproval=()=>E.REQUIRE_APPROVAL?E.REQUIRE_APPROVAL!=="false":REQUIRE_APPROVAL;
+async function notifyBooked(r,withAdmin=true){
   const task=[
-    email(r.email,"Your Access Card · Tosin & Raphael’s Wedding, 5 December 2026",cardHtml(r)),
+    email(r.email,cardSubject(r),cardHtml(r),cardText(r)),
     sms(r.phone,`Hi ${r.name.split(" ")[0]}, your seat is confirmed for Tosin & Raphael's wedding, ${DATE}. ${r.category}, Table ${tablesOf(r)}. Ref ${r.id} (also your Photo Wall code). Card: ${site()}/rsvp.html?card=${r.id}`),
-    email(E.ADMIN_EMAIL,`New booking: ${r.name} (${r.category})`,`<p>${esc(r.name)} booked ${seatsOf(r)}.<br>${esc(r.email)} · ${esc(r.phone)}<br>Ref ${r.id}</p>`)];
+    ...(withAdmin?[email(E.ADMIN_EMAIL,`New booking: ${r.name} (${r.category})`,`<p>${esc(r.name)} booked ${seatsOf(r)}.<br>${esc(r.email)} · ${esc(r.phone)}<br>Ref ${r.id}</p>`)]:[])];
   await Promise.allSettled(task);
+}
+// A seat REQUEST: the guest is told it is held for approval, and you are asked to review it
+async function notifyRequested(r){
+  const html=`<div style="font-family:Georgia,serif;max-width:520px;margin:auto;color:#3b1f27;line-height:1.6"><p>Hello ${esc(r.name)},</p><p>We have received your seat request for Tosin &amp; Raphael&#8217;s wedding on ${DATE}.</p><p><b>Category:</b> ${esc(r.category)}<br><b>Table:</b> ${tablesOf(r)}<br><b>Request reference:</b> ${r.id}</p><p>Your seat is being held while the couple confirm that you are an invited guest. Once it is approved, your access card will be sent to this email address and by SMS.</p><p><a href="${site()}/rsvp.html?card=${r.id}" style="color:#7a1f3d">Check the status of your request</a></p></div>`;
+  const text=`Hello ${r.name},\n\nWe have received your seat request for Tosin & Raphael's wedding on ${DATE}.\n\nCategory: ${r.category}\nTable: ${tablesOf(r)}\nRequest reference: ${r.id}\n\nYour seat is being held while the couple confirm that you are an invited guest. Once it is approved, your access card will be sent to this email address and by SMS.\n\nCheck the status of your request: ${site()}/rsvp.html?card=${r.id}`;
+  await Promise.allSettled([
+    email(r.email,"Seat request received \u00b7 Tosin & Raphael\u2019s Wedding",html,text),
+    email(E.ADMIN_EMAIL,`Seat request to review: ${r.name} (${r.category})`,`<p><b>${esc(r.name)}</b> has asked for a seat (${esc(r.category)}, Table ${tablesOf(r)}).<br>${esc(r.email)} · ${esc(r.phone)}<br>Request ${r.id}</p><p>Approve or decline it here: <a href="${site()}/admin.html">${site()}/admin.html</a></p>`)]);
+}
+// Uninvited guest: their reserved seat is cancelled; they are told to contact the couple for approval
+async function notifyUninvited(r){
+  const contact=E.COUPLE_CONTACT?"the couple on "+E.COUPLE_CONTACT:"the couple (you can simply reply to this email)";
+  const html=`<div style="font-family:Georgia,serif;max-width:520px;margin:auto;color:#3b1f27;line-height:1.6"><p>Hello ${esc(r.name)},</p><p>We are sorry, but the seat you reserved for Tosin &amp; Raphael&#8217;s wedding on ${DATE} is <b>no longer valid</b>, because you are <b>not an approved invited guest</b>. Your access card (${r.id}) has been cancelled and will not be accepted at the entrance.</p><p>If you believe this is a mistake, or you would like to be approved, please contact ${esc(contact)}. You will be able to book again once the couple have approved you.</p></div>`;
+  const text=`Hello ${r.name},\n\nWe are sorry, but the seat you reserved for Tosin & Raphael's wedding on ${DATE} is no longer valid, because you are not an approved invited guest. Your access card (${r.id}) has been cancelled and will not be accepted at the entrance.\n\nIf you believe this is a mistake, or you would like to be approved, please contact ${contact}. You will be able to book again once the couple have approved you.`;
+  await Promise.allSettled([
+    email(r.email,"Your reserved seat is no longer valid \u00b7 Tosin & Raphael\u2019s Wedding",html,text),
+    sms(r.phone,`Hi ${r.name.split(" ")[0]}, your reserved seat for Tosin & Raphael's wedding is no longer valid because you are not an approved invited guest. Your access card ${r.id} is cancelled. Please contact the couple for approval.`)]);
+}
+async function notifyAllowed(r){
+  const html=`<div style="font-family:Georgia,serif;max-width:520px;margin:auto;color:#3b1f27;line-height:1.6"><p>Hello ${esc(r.name)},</p><p>Good news: the couple have approved you as a guest at Tosin &amp; Raphael&#8217;s wedding on ${DATE}.</p><p>You can now book your seat here: <a href="${site()}/rsvp.html" style="color:#7a1f3d">${site()}/rsvp.html</a></p></div>`;
+  const text=`Hello ${r.name},\n\nGood news: the couple have approved you as a guest at Tosin & Raphael's wedding on ${DATE}.\n\nYou can now book your seat here: ${site()}/rsvp.html`;
+  await Promise.allSettled([email(r.email,"You can now book your seat \u00b7 Tosin & Raphael\u2019s Wedding",html,text),
+    sms(r.phone,`Hi ${r.name.split(" ")[0]}, the couple have approved you. You can now book your seat for Tosin & Raphael's wedding at ${site()}/rsvp.html`)]);
+}
+// Declined: tell the guest they are not an approved invited guest and should contact the couple
+async function notifyDeclined(r){
+  const contact=E.COUPLE_CONTACT?"the couple on "+E.COUPLE_CONTACT:"the couple (you can simply reply to this email)";
+  const html=`<div style="font-family:Georgia,serif;max-width:520px;margin:auto;color:#3b1f27;line-height:1.6"><p>Hello ${esc(r.name)},</p><p>Thank you for asking for a seat at Tosin &amp; Raphael&#8217;s wedding on ${DATE}.</p><p>We are sorry, but your request could not be approved because you are <b>not an approved invited guest</b>. The seat you asked for has been released.</p><p>If you believe this is a mistake, or you would like more information, please contact ${esc(contact)}.</p><p style="color:#777;font-size:13px">Request reference: ${r.id}</p></div>`;
+  const text=`Hello ${r.name},\n\nThank you for asking for a seat at Tosin & Raphael's wedding on ${DATE}.\n\nWe are sorry, but your request could not be approved because you are not an approved invited guest. The seat you asked for has been released.\n\nIf you believe this is a mistake, or you would like more information, please contact ${contact}.\n\nRequest reference: ${r.id}`;
+  await Promise.allSettled([
+    email(r.email,"Update on your seat request \u00b7 Tosin & Raphael\u2019s Wedding",html,text),
+    sms(r.phone,`Hi ${r.name.split(" ")[0]}, your seat request for Tosin & Raphael's wedding was not approved because you are not an approved invited guest. Please contact the couple for more information. Ref ${r.id}`)]);
 }
 async function notifyReleased(r){
   const link=site()+"/rsvp.html";
@@ -139,7 +191,7 @@ export default async (req,context)=>{
         if(!last||Date.now()-last.t>300000){
           await rl.setJSON("resend:"+em,{t:Date.now()});
           await later(Promise.allSettled([
-            email(rec.email,"Your Access Card \u00b7 Tosin & Raphael\u2019s Wedding, 5 December 2026",cardHtml(rec)),
+            email(rec.email,cardSubject(rec),cardHtml(rec),cardText(rec)),
             sms(rec.phone,`Hi ${rec.name.split(" ")[0]}, your reference is ${rec.id} (also your Photo Wall code). Card: ${site()}/rsvp.html?card=${rec.id}`)]));
         }
       }
@@ -189,6 +241,7 @@ export default async (req,context)=>{
         if(!live)return J({error:"This reference is no longer valid. Please contact the couple if you think this is a mistake.",revoked:true},401);
       }
       if(!st.open&&!admin)return J({error:"The photo wall is not open yet.",...st},403);
+      if(p==="photo-me")return J({ok:true,role:auth.r,tag:tagOf(ref)});   // quick "am I still allowed in?" check used by the photo wall every few seconds
       const glist=async r=>(await pm.get("g:"+r,{type:"json"}).catch(()=>null))||[];
 
       if(p==="photos"){
@@ -215,7 +268,7 @@ export default async (req,context)=>{
         const m=await pm.get("m:"+id,{type:"json"});if(!m)return J({error:"Not found"},404);
         if(size==="full"&&!admin&&m.ref!==ref)return J({error:"Only the person who took this photo can download it."},403);
         const buf=await ph.get(size[0]+":"+id,{type:"arrayBuffer"});if(!buf)return J({error:"Not found"},404);
-        const h={"content-type":"image/jpeg","x-content-type-options":"nosniff","cache-control":"private, max-age=3600"};
+        const h={"content-type":"image/jpeg","x-content-type-options":"nosniff","cache-control":"private, no-store"};
         if(size==="full"&&u.searchParams.get("dl")==="1")h["content-disposition"]=`attachment; filename="ArtFullyTee-${id.slice(14)}.jpg"`;
         return new Response(buf,{headers:h});
       }
@@ -260,13 +313,15 @@ export default async (req,context)=>{
       if(!open)return J({locked:true,unlockAt:at.toISOString(),now:Date.now()},403);
       return J({items:PROGRAM,date:DATE,unlockAt:at.toISOString()});
     }
-    if(p==="config")return J({SIDES,DATE,MAX_SEATS});
+    if(p==="config")return J({SIDES,DATE,MAX_SEATS,REQUIRE_APPROVAL:needApproval()});
     if(p==="taken"){const {blobs}=await seatS.list({prefix:"s:"});return J(blobs.map(b=>b.key.slice(2)))}
-    if(p==="card"){if(await tooMany("card",600,600000))return J({error:"Too many requests. Please wait a few minutes."},429);await hit("card",600000);const r=await bk.get("b:"+u.searchParams.get("id"),{type:"json"});return r?J(pub(r)):J({error:"Card not found"},404)}
+    if(p==="card"){if(await tooMany("card",3000,600000))return J({error:"Too many requests. Please wait a few minutes."},429);await hit("card",600000);const r=await bk.get("b:"+u.searchParams.get("id"),{type:"json"});return r?J(pub(r)):J({error:"Card not found"},404)}
 
     if(p==="book"&&req.method==="POST"){
       if(await tooMany("book",8,600000))return J({error:"Too many attempts. Please wait a few minutes and try again."},429);
       await hit("book",600000);
+      if(await tooMany("bookday",15,86400000))return J({error:"Too many requests from this connection today. Please contact the couple."},429);
+      await hit("bookday",86400000);
       const raw=await req.text();if(raw.length>4000)return J({error:"Request too large."},413);
       let b;try{b=JSON.parse(raw)}catch(e){return J({error:"Bad request."},400)}
       if(!b||typeof b!=="object"||b.website)return J({error:"Invalid request."},400); // "website" is a hidden trap field only bots fill in
@@ -287,12 +342,13 @@ export default async (req,context)=>{
       // One booking per guest: lock the email and phone number first (atomic, so two taps can't slip through)
       if(ONE_BOOKING_PER_GUEST){
         for(const k of ["e:"+email.toLowerCase(),"p:"+ng(phone)]){
-          let ok=(await seatS.set(k,id,{onlyIfNew:true})).modified;
+          let ok=(await seatS.set(k,id,{onlyIfNew:true})).modified,uninv=false;
           if(!ok){ // maybe a stale lock from a failed or released booking: clear it and retry once
             const old=await seatS.get(k),ob=old&&await bk.get("b:"+old,{type:"json"});
-            if(!ob||ob.status!=="confirmed"){await seatS.delete(k);ok=(await seatS.set(k,id,{onlyIfNew:true})).modified}
+            if(ob&&ob.status==="uninvited")uninv=true;
+            if(!ob||ob.status==="released"||ob.status==="declined"){await seatS.delete(k);ok=(await seatS.set(k,id,{onlyIfNew:true})).modified}
           }
-          if(!ok){await undo();return J({error:"This email or phone number has already been used to book a seat. Each guest can book only one seat. Please contact the couple if this is a mistake.",code:"duplicate_guest"},409)}
+          if(!ok){await undo();return J({error:uninv?"These details belong to someone who is not an approved invited guest. Please contact the couple for approval.":"This email or phone number has already been used to book a seat. Each guest can book only one seat. Please contact the couple if this is a mistake.",code:uninv?"not_invited":"duplicate_guest"},409)}
           gotG.push(k);
         }
       }
@@ -301,9 +357,9 @@ export default async (req,context)=>{
         if(!r.modified){await undo();return J({error:`Seat Table ${s.replace("-"," Seat ")} was just taken. Please pick another.`,seat:s},409)}
         got.push(s);
       }
-      const rec={id,name,email,phone,grouping:f.side.label,category:f.group.label,seats,status:"confirmed",at:new Date().toISOString()};
+      const rec={id,name,email,phone,grouping:f.side.label,category:f.group.label,seats,status:needApproval()?"pending":"confirmed",at:new Date().toISOString()};
       try{await bk.setJSON("b:"+id,rec)}catch(e){await undo();throw e}
-      try{await later(notifyBooked(rec))}catch(e){console.error("notify failed",e)}
+      try{await later(rec.status==="pending"?notifyRequested(rec):notifyBooked(rec))}catch(e){console.error("notify failed",e)}
       return J({ok:true,booking:pub(rec)});
     }
 
@@ -317,7 +373,7 @@ export default async (req,context)=>{
         const {id}=await req.json(),r=await bk.get("b:"+String(id||"").trim().toUpperCase(),{type:"json"});
         if(!r)return J({result:"invalid",reason:"Card not found"});
         const info={name:r.name,category:r.category,tables:tablesOf(r),seats:seatsOf(r),id:r.id};
-        if(r.status!=="confirmed")return J({result:"invalid",reason:"Card was released / cancelled",...info});
+        if(r.status!=="confirmed")return J({result:"invalid",reason:r.status==="pending"?"Seat request not approved yet":r.status==="declined"?"Request was not approved":r.status==="uninvited"?"Cancelled: not an approved invited guest":"Card was released / cancelled",...info});
         const now=new Date().toISOString();
         const w=await seatS.set("a:"+r.id,now,{onlyIfNew:true});
         if(!w.modified){const prev=await seatS.get("a:"+r.id);return J({result:"used",at:lag(prev),...info})}
@@ -331,37 +387,64 @@ export default async (req,context)=>{
         await seatS.delete("a:"+id);delete r.arrivedAt;await bk.setJSON("b:"+id,r);
         return J({ok:true});
       }
+      if(p==="admin/allow"&&req.method==="POST"){
+        if(!isAdmin)return J({error:"Unauthorized"},401);
+        const {id}=await req.json(),r=await bk.get("b:"+id,{type:"json"});
+        if(!r||r.status!=="uninvited")return J({error:"This guest is not marked as uninvited."},404);
+        r.status="released";r.allowedAt=new Date().toISOString();
+        await Promise.all([...["e:"+String(r.email).toLowerCase(),"p:"+ng(r.phone)].map(async k=>{if(await seatS.get(k)===r.id)await seatS.delete(k)}),bk.setJSON("b:"+id,r)]);
+        await later(notifyAllowed(r));return J({ok:true});
+      }
+      if(p==="admin/approve"&&req.method==="POST"){
+        if(!isAdmin)return J({error:"Unauthorized"},401);
+        const {id}=await req.json(),r=await bk.get("b:"+id,{type:"json"});
+        if(!r||r.status!=="pending")return J({error:"This request is not waiting for approval."},404);
+        r.status="confirmed";r.approvedAt=new Date().toISOString();await bk.setJSON("b:"+id,r);
+        await later(notifyBooked(r,false));return J({ok:true});   // the guest now gets the access card by email and SMS
+      }
+      if(p==="admin/decline"&&req.method==="POST"){
+        if(!isAdmin)return J({error:"Unauthorized"},401);
+        const {id}=await req.json(),r=await bk.get("b:"+id,{type:"json"});
+        if(!r||r.status!=="pending")return J({error:"This request is not waiting for approval."},404);
+        r.status="declined";r.declinedAt=new Date().toISOString();
+        await Promise.all([
+          ...r.seats.map(s=>seatS.delete("s:"+s)),
+          ...["e:"+String(r.email).toLowerCase(),"p:"+ng(r.phone)].map(async k=>{if(await seatS.get(k)===r.id)await seatS.delete(k)}),
+          bk.setJSON("b:"+id,r)]);
+        await later(notifyDeclined(r));return J({ok:true});
+      }
       if(p==="admin/orphans"){
         const {blobs:sb}=await seatS.list({prefix:"s:"});
         const found=await Promise.all(sb.map(async x=>{const ref=await seatS.get(x.key),r=await bk.get("b:"+ref,{type:"json"});
-          return(!r||r.status!=="confirmed")?{seat:x.key.slice(2),ref,reason:r?"booking "+r.status:"no booking record"}:null}));
+          return(!r||(r.status!=="confirmed"&&r.status!=="pending"))?{seat:x.key.slice(2),ref,reason:r?"booking "+r.status:"no booking record"}:null}));
         return J(found.filter(Boolean));
       }
       if(p==="admin/freeseat"&&req.method==="POST"){
         const {seat}=await req.json(),ref=await seatS.get("s:"+seat);
         if(!ref)return J({error:"Seat is already free"},404);
         const r=await bk.get("b:"+ref,{type:"json"});
-        if(r&&r.status==="confirmed")return J({error:"Seat belongs to a confirmed booking. Use Release seats instead."},400);
+        if(r&&(r.status==="confirmed"||r.status==="pending"))return J({error:"This seat belongs to a booking or a pending request. Use Release, Approve or Decline instead."},400);
         await seatS.delete("s:"+seat);return J({ok:true});
       }
       const {blobs}=await bk.list({prefix:"b:"});
       const all=(await Promise.all(blobs.map(b=>bk.get(b.key,{type:"json"})))).filter(Boolean).sort((a,b)=>a.at<b.at?1:-1);
       if(p==="admin/list")return J(all);
       if(p==="admin/release"&&req.method==="POST"){
-        const {id}=await req.json(),r=await bk.get("b:"+id,{type:"json"});
+        const {id,reason}=await req.json(),r=await bk.get("b:"+id,{type:"json"});
         if(!r||r.status!=="confirmed")return J({error:"Booking not found or already released."},404);
-        r.status="released";r.releasedAt=new Date().toISOString();
+        const unin=reason==="uninvited";   // "uninvited": the guest is told to contact the couple and cannot simply book again
+        r.status=unin?"uninvited":"released";r.releasedAt=new Date().toISOString();
         await Promise.all([
           ...r.seats.map(s=>seatS.delete("s:"+s)),
-          ...["e:"+String(r.email).toLowerCase(),"p:"+ng(r.phone)].map(async k=>{if(await seatS.get(k)===r.id)await seatS.delete(k)}), // let the guest rebook
+          ...(unin?[]:["e:"+String(r.email).toLowerCase(),"p:"+ng(r.phone)].map(async k=>{if(await seatS.get(k)===r.id)await seatS.delete(k)})), // a normal release lets the guest rebook
           bk.setJSON("b:"+id,r)]);
-        await later(notifyReleased(r));return J({ok:true});
+        await later(unin?notifyUninvited(r):notifyReleased(r));return J({ok:true});
       }
       if(p==="admin/export"){
         const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet("Guests");
         ws.columns=[["Ref","id"],["Name","name"],["Email","email"],["Phone","phone"],["Grouping","grouping"],["Category","category"],["Table(s)","t"],["Seat(s)","s"],["Status","status"],["Attended","att"],["Booked at","at"],["Arrived at","arr"]].map(([header,key])=>({header,key,width:22}));
         ws.getRow(1).font={bold:true};
-        all.forEach(r=>ws.addRow({...r,t:tablesOf(r),s:seatsOf(r),arr:lag(r.arrivedAt),att:r.status==="confirmed"?(r.arrivedAt?"Yes":"No"):"Released"}));
+        all.forEach(r=>ws.addRow({...r,t:tablesOf(r),s:seatsOf(r),arr:lag(r.arrivedAt),att:r.status==="confirmed"?(r.arrivedAt?"Yes":"No"):r.status==="pending"?"Pending approval":r.status==="declined"?"Declined":r.status==="uninvited"?"Not invited":"Released"}));
         const sm=wb.addWorksheet("Attendance summary");
         sm.columns=[{header:"Category",key:"c",width:30},{header:"Booked",key:"b",width:12},{header:"Attended",key:"a",width:12},{header:"Not yet arrived",key:"n",width:18}];
         sm.getRow(1).font={bold:true};

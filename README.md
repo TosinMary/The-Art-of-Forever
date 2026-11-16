@@ -20,6 +20,7 @@ Wedding website with **seat booking, emailed access cards, an admin dashboard wi
 | Admin dashboard | See all bookings, release a seat, free stuck seats, download an Excel sheet |
 | Check-in scanner | Ushers scan the QR in the guest's email. Green = valid, red = used or invalid |
 | Photo Wall | Guests sign in with the reference on their access card (or the shared guest code if they did not book a seat), take or upload up to 5 photos, and scroll through everyone's photos. Each guest can download only their own. The couple can view, download and delete all. Uploads and deletions close at 6:00 AM on 6 December 2026 |
+| Instant booking and uninvited guests | Seats are confirmed at once and the access card is emailed immediately (`REQUIRE_APPROVAL=false`). If a guest turns out not to be invited, click **Not invited** on the admin page: the seat is freed, the access card and Photo Wall access stop working, and the guest is emailed (and sent an SMS) that they are not an approved invited guest and should contact the couple for approval. They cannot simply book again until you click **Allow booking again**. A normal **Release seats** is still there for genuine mistakes (the guest is asked to rebook). Set `REQUIRE_APPROVAL=true` instead if you want every request held for approval |
 | My reference | After booking, the guest's reference is shown on their card and remembered on that device (a small "My reference" tag on every page). On any other phone or computer the guest enters the email and phone number they booked with (home page or RSVP page) to bring it back, or has the card emailed again. Opening the "View card online" link from the email also restores it |
 | Photo Wall banner | A clear Photo Wall section on the home page explains how to get in (reference, guest code, or find your reference) |
 | Order of Program | A page guests can open only from 5:00 AM on 5 December 2026. The server checks the time, so it cannot be opened early by changing a phone's clock |
@@ -118,6 +119,10 @@ ArtfullyTee/
 | `GET /api/taken` | Public | List of booked seats |
 | `POST /api/photo-login` | Public | Sign in with a card reference, a personal GST code, the shared guest code plus a name, or the admin key |
 | `POST /api/find-reference` | Public | Returns the reference when the email AND phone number match a confirmed booking (5 wrong tries per email per hour) |
+| `POST /api/admin/release` | Admin key | Release a booking. With `reason: "uninvited"` the guest is told they are not an approved invited guest and is blocked from booking again |
+| `POST /api/admin/allow` | Admin key | Let a not-invited guest book again (they are emailed) |
+| `POST /api/admin/approve` | Admin key | Approve a pending request and send the access card |
+| `POST /api/admin/decline` | Admin key | Decline a pending request, free the seat and notify the guest |
 | `POST /api/resend-card` | Public | Email the access card again to the address it was booked with (same reply whether or not a booking exists) |
 | `GET /api/photos` | Signed in | List photos (newest first, 60 at a time, `?mine=1` for own photos) |
 | `GET /api/photo?id=...&size=thumb\|view\|full` | Signed in | Photo image. `full` (download) only for the owner or the couple |
@@ -177,6 +182,8 @@ Set in **Netlify, Site configuration, Environment variables** (tick "Contains se
 | `BREVO_API_KEY` | Yes | Brevo API key (starts with `xkeysib-`) |
 | `SENDER_EMAIL` | Yes | Verified Brevo sender address |
 | `SENDER_NAME` | No | Display name (default: Tosin & Raphael's Wedding) |
+| `COUPLE_CONTACT` | No | A phone number or email shown in the "not approved" message so guests know how to reach you (otherwise it says to reply to the email) |
+| `REQUIRE_APPROVAL` | No | Testing override: `false` confirms seats instantly, `true` holds them for approval. Overrides `config.mjs` |
 | `PHOTO_GUEST_CODE` | No | The shared photo-wall code for guests without a booking. Overrides `GENERIC_PHOTO_REF` in `config.mjs` |
 | `PHOTOS_UPLOAD_UNTIL_AT` | No | Testing only: overrides the upload deadline |
 | `PHOTOS_OPEN_AT` | No | Testing only: overrides when the photo wall opens. **Delete it before launch** |
@@ -266,6 +273,7 @@ Local bookings are stored on your computer only and do not appear on the live si
 | Admin says wrong key | `ADMIN_KEY` is not set where the server runs, or you redeployed without it |
 | A seat is stuck as taken | `/admin.html`, **Load**, then **Free this seat** in the yellow box |
 | Scanner cannot open camera | Use the live https address and allow camera access |
+| Access card email lands in Promotions or Spam | Authenticate your own domain in Brevo (Senders, Domains & Dedicated IPs, then Domains: add the DKIM, SPF and DMARC records at your domain registrar) and use an address on that domain as `SENDER_EMAIL`. A free Gmail address sent through Brevo cannot be authenticated, which is the main cause. Also ask guests to move the email to Primary and add the sender to contacts |
 | Excel download fails | Run `npm install exceljs@latest` and redeploy |
 | `command not found: netlify` | Use `npx netlify-cli dev` |
 
