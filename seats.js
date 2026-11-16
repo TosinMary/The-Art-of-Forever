@@ -7,6 +7,9 @@
   function showCard(c) {
     $("app").hidden = true; $("cardWrap").hidden = false;
     $("cn").textContent = c.name; $("cg").textContent = c.grouping; $("cc").textContent = c.category;
+    const sameCat = c.grouping === c.category;
+    $("cc").style.display = sameCat ? "none" : ""; if ($("cc").previousElementSibling) $("cc").previousElementSibling.style.display = sameCat ? "none" : "";
+    if ($("cg").previousElementSibling) $("cg").previousElementSibling.textContent = sameCat ? "Guest" : "Grouping";
     $("ct").textContent = c.tables; $("cd").textContent = c.date; $("ci").textContent = c.id;
     const pend = c.status === "pending", decl = c.status === "declined";
     $("ch").textContent = pend ? "Seat request received" : decl ? "Request not approved" : "Access Card";
@@ -92,7 +95,7 @@
   $("go").textContent = reqText;
   if (cfg.REQUIRE_APPROVAL) { const ld = $("lead"); if (ld) ld.textContent = "Choose your group and seat. The couple will confirm your invitation, then your access card is sent to you by email and SMS. Saturday, 5 December 2026."; }
   const maxSeats = cfg.MAX_SEATS || 1;
-  $("seatBox").querySelector("h2").textContent = maxSeats === 1 ? "3. Pick your seat" : "3. Pick your seat(s)";
+  $("seatBox").querySelector("h2").textContent = (cfg.SIDES.length === 1 && cfg.SIDES[0].groups.length === 1 ? "2. " : "3. ") + (maxSeats === 1 ? "Pick your seat" : "Pick your seat(s)");
   $("seatBox").querySelector(".legend").insertAdjacentHTML("beforebegin", `<p style="margin:0 0 .6rem;color:var(--muted)">Each guest can book ${maxSeats === 1 ? "one seat" : "up to " + maxSeats + " seats"}.</p>`);
   const loadTaken = async () => { taken = new Set((await api("taken")).d); };
   await loadTaken();
@@ -107,6 +110,13 @@
     ["det", "seatBox", "bar"].forEach((i) => ($(i).hidden = false));
     render();
   };
+  // Only one guest type: skip the "Who are you with?" step and go straight to the details and seat map
+  const single = cfg.SIDES.length === 1 && cfg.SIDES[0].groups.length === 1;
+  if (single) {
+    $("sides").closest(".box").hidden = true;
+    $("det").querySelector("h2").textContent = "1. Your details";
+    $("sides").querySelector("button").click();
+  }
   $("group").onchange = render;
   const grp = () => side.groups.find((g) => g.id === $("group").value) || side.groups[0];
 

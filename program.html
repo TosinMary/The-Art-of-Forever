@@ -89,7 +89,7 @@
 
     function showProgram(d) {
       clearInterval(tick);
-      document.getElementById("sub").textContent = d.date || "Saturday, 5 December 2026";
+      document.getElementById("sub").textContent = (d.title ? d.title + " \u00b7 " : "") + (d.date || "Saturday, 5 December 2026");
       box.innerHTML = '<ol class="prog">' + d.items.map((it, i) =>
         `<li><span class="n">${i + 1}</span><div>${it.time ? `<span class="t">${esc(it.time)}</span>` : ""}<h3>${esc(it.title)}</h3>${it.note ? `<p>${esc(it.note)}</p>` : ""}</div></li>`).join("") +
         '</ol><div class="prog-end">&#10086; &#10022; &#10086;<p>With love, Tosin &amp; Raphael</p></div>';

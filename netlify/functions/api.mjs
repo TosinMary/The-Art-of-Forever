@@ -1,7 +1,7 @@
 import {getStore} from "@netlify/blobs";
 import {timingSafeEqual,randomInt,randomBytes,createHmac} from "node:crypto";
 import ExcelJS from "exceljs";
-import {SIDES,DATE,MAX_SEATS,ONE_BOOKING_PER_GUEST,REQUIRE_APPROVAL,PROGRAM,PROGRAM_UNLOCK,PHOTOS_OPEN,PHOTOS_UPLOAD_UNTIL,MAX_PHOTOS_PER_GUEST,GENERIC_PHOTO_REF,findGroup} from "./config.mjs";
+import {SIDES,DATE,MAX_SEATS,ONE_BOOKING_PER_GUEST,REQUIRE_APPROVAL,PROGRAM,PROGRAM_TITLE,PROGRAM_UNLOCK,PHOTOS_OPEN,PHOTOS_UPLOAD_UNTIL,MAX_PHOTOS_PER_GUEST,GENERIC_PHOTO_REF,findGroup} from "./config.mjs";
 
 export const config={path:"/api/*"};
 const E=process.env;
@@ -41,8 +41,7 @@ const cardText=r=>`Hello ${r.name},
 Your seat for Tosin & Raphael's wedding is confirmed.
 
 Name: ${r.name}
-Group: ${r.grouping}
-Category: ${r.category}
+${r.category===r.grouping?"Guest: "+r.grouping:"Group: "+r.grouping+"\nCategory: "+r.category}
 Table: ${tablesOf(r)}
 Date: ${DATE}
 Reference: ${r.id}
@@ -79,8 +78,8 @@ const cardHtml=r=>{
 <tr><td style="padding:10px 22px 0;${F}font-size:12px;letter-spacing:6px;text-transform:uppercase;color:#3b1f27">Wedding Access Card</td></tr>
 <tr><td style="padding:14px 22px 0;color:#c9a45c;font-size:15px;letter-spacing:6px">&mdash;&mdash;&mdash; &#9829; &mdash;&mdash;&mdash;</td></tr>
 <tr><td style="padding:20px 22px 4px;${F}font-size:26px;color:#3b1f27">${esc(r.name)}</td></tr>
-<tr><td style="padding:14px 22px 0">${lab("Grouping")}<div style="${F}font-size:16px;color:#3b1f27">${esc(r.grouping)}</div></td></tr>
-<tr><td style="padding:14px 22px 0">${lab("Category")}<div style="${F}font-size:16px;color:#3b1f27">${esc(r.category)}</div></td></tr>
+<tr><td style="padding:14px 22px 0">${lab(r.category===r.grouping?"Guest":"Grouping")}<div style="${F}font-size:16px;color:#3b1f27">${esc(r.grouping)}</div></td></tr>
+${r.category===r.grouping?"":`<tr><td style="padding:14px 22px 0">${lab("Category")}<div style="${F}font-size:16px;color:#3b1f27">${esc(r.category)}</div></td></tr>`}
 <tr><td style="padding:16px 14px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
 <td width="40%" align="center">${lab("Table")}<div style="${F}font-size:26px;color:#5b1a2a">${tablesOf(r)}</div></td>
 <td width="60%" align="center" style="border-left:1px solid #e6d5aa">${lab("Date")}<div style="${F}font-size:16px;line-height:26px;color:#3b1f27">${DATE}</div></td>
@@ -311,7 +310,7 @@ export default async (req,context)=>{
       const open=Date.now()>=at.getTime();
       if(p==="program-status")return J({unlocked:open,unlockAt:at.toISOString(),now:Date.now()});
       if(!open)return J({locked:true,unlockAt:at.toISOString(),now:Date.now()},403);
-      return J({items:PROGRAM,date:DATE,unlockAt:at.toISOString()});
+      return J({items:PROGRAM,title:PROGRAM_TITLE,date:DATE,unlockAt:at.toISOString()});
     }
     if(p==="config")return J({SIDES,DATE,MAX_SEATS,REQUIRE_APPROVAL:needApproval()});
     if(p==="taken"){const {blobs}=await seatS.list({prefix:"s:"});return J(blobs.map(b=>b.key.slice(2)))}

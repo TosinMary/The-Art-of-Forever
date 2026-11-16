@@ -23,7 +23,7 @@ Wedding website with **seat booking, emailed access cards, an admin dashboard wi
 | Instant booking and uninvited guests | Seats are confirmed at once and the access card is emailed immediately (`REQUIRE_APPROVAL=false`). If a guest turns out not to be invited, click **Not invited** on the admin page: the seat is freed, the access card and Photo Wall access stop working, and the guest is emailed (and sent an SMS) that they are not an approved invited guest and should contact the couple for approval. They cannot simply book again until you click **Allow booking again**. A normal **Release seats** is still there for genuine mistakes (the guest is asked to rebook). Set `REQUIRE_APPROVAL=true` instead if you want every request held for approval |
 | My reference | After booking, the guest's reference is shown on their card and remembered on that device (a small "My reference" tag on every page). On any other phone or computer the guest enters the email and phone number they booked with (home page or RSVP page) to bring it back, or has the card emailed again. Opening the "View card online" link from the email also restores it |
 | Photo Wall banner | A clear Photo Wall section on the home page explains how to get in (reference, guest code, or find your reference) |
-| Order of Program | A page guests can open only from 5:00 AM on 5 December 2026. The server checks the time, so it cannot be opened early by changing a phone's clock |
+| Order of Program | The Wedding Reception program (15 items, edited in `config.mjs`), shown to guests only from 5:00 AM on 5 December 2026. The server checks the time, so it cannot be opened early by changing a phone's clock |
 | Notifications | You get an email for every booking and every release |
 
 ---
@@ -66,27 +66,15 @@ The site is plain HTML, CSS and JavaScript. The only server code is one Netlify 
 
 ---
 
-## 3. Seating layout (300 seats)
+## 3. Seating layout (120 seats)
 
 Defined in `netlify/functions/config.mjs`. Change it there and nothing else needs editing.
 
-| Side | Category | Tables | Seats |
-|---|---|---|---|
-| Bride's Family | Bride's Family | 1 to 15 | 10 each (150) |
-| Groom / Couple's | Aso Ebi Ladies | 16 | 7 |
-| | Groomsmen | 17 | 7 |
-| | Groom's Family | 18, 19 | 10 each |
-| | Groom's Friends | 20 | 10 |
-| | Bride's Friends | 21 | 10 |
-| | Cobranet | 22, 23 | 10 each |
-| | D.light | 24 | 10 |
-| | FUOYE | 25 | 10 |
-| | Damilola's Friends | 26 | 10 |
-| | Korede's Friends | 27, 28 | 10 each |
-| | KUDA | 29, 30 | 10 each |
-| | Vendors | 31 | 6 |
+There is one guest type, **Invited Guest**, and no category step. Guests go straight to their details and the seat map.
 
-The groom side totals 150 seats.
+| Tables | Seats per table | Total |
+|---|---|---|
+| Table 16 to Table 27 (12 tables) | 10 | 120 |
 
 ---
 
