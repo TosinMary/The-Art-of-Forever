@@ -110,15 +110,25 @@
     ["det", "seatBox", "bar"].forEach((i) => ($(i).hidden = false));
     render();
   };
-  // Only one guest type: skip the "Who are you with?" step and go straight to the details and seat map
+  $("group").onchange = render;
+  const grp = () => side.groups.find((g) => g.id === $("group").value) || side.groups[0];
+
+  // Email must be filled in (and look valid) before seats can be chosen
+  const emailOk = () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("email").value.trim());
+  const detailsOk = () => emailOk() && $("name").value.trim().length >= 2 && $("phone").value.replace(/\D/g, "").length >= 10;
+  ["name", "email", "phone"].forEach((id) => ["input", "change", "blur"].forEach((ev) => $(id).addEventListener(ev, () => {
+    if (id === "email" && !emailOk() && picked.size) { picked.clear(); document.querySelectorAll(".seat.sel").forEach((x) => x.classList.remove("sel")); }
+    upd();
+  })));
+
+  // Only one guest type: skip the "Who are you with?" step and go straight to the details and seat map.
+  // (Must run AFTER grp/emailOk/detailsOk are defined, otherwise render() crashes and no seats appear.)
   const single = cfg.SIDES.length === 1 && cfg.SIDES[0].groups.length === 1;
   if (single) {
     $("sides").closest(".box").hidden = true;
     $("det").querySelector("h2").textContent = "1. Your details";
     $("sides").querySelector("button").click();
   }
-  $("group").onchange = render;
-  const grp = () => side.groups.find((g) => g.id === $("group").value) || side.groups[0];
 
   function render() {
     picked.clear();
@@ -136,6 +146,7 @@
     const b = e.target.closest(".seat"); if (!b || b.disabled) return;
     const k = b.dataset.k, max = cfg.MAX_SEATS || 1;
     $("err").textContent = "";
+    if (!emailOk()) { $("err").textContent = "Please enter your email address first."; $("email").focus(); return; }
     if (picked.has(k)) { picked.delete(k); b.classList.remove("sel"); }
     else {
       if (picked.size >= max) {
@@ -149,11 +160,15 @@
   };
   function upd() {
     $("sum").textContent = picked.size ? picked.size + (picked.size > 1 ? " seats: " : " seat: ") + [...picked].map((k) => "T" + k.replace("-", " S")).join(", ") : "No seat selected yet";
-    $("go").disabled = !picked.size;
+    const ok = emailOk();
+    $("seatBox").classList.toggle("locked", !ok);
+    $("seatLock").hidden = ok;
+    $("go").disabled = !(picked.size && detailsOk());
   }
 
   $("go").onclick = async () => {
     $("err").textContent = "";
+    if (!detailsOk()) { $("err").textContent = "Please enter your full name, a valid email and your phone number."; return; }
     $("go").disabled = true; $("go").textContent = "Booking...";
     const r = await api("book", {
       method: "POST", headers: { "content-type": "application/json" },

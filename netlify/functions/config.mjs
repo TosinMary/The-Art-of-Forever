@@ -33,6 +33,9 @@ export const MAX_PHOTOS_PER_GUEST=5;                           // photos each gu
 // Better kept private: you can also set it as the PHOTO_GUEST_CODE variable in Netlify, which takes priority over this value.
 export const GENERIC_PHOTO_REF="ART-NUZ7EQ";
 export const DATE="Saturday, 5 December 2026";
+// Seats per table (table number -> seats). Edit a number here any time to change a table's capacity.
+const SEATS_PER_TABLE={16:9,17:9,18:9,19:9,20:11,21:10,22:9,23:9,24:10,25:9,26:9,27:10,28:9};   // 13 tables, 122 seats
+const TABLES=Object.entries(SEATS_PER_TABLE).map(([n,seats])=>({n:+n,seats}));
 export const SIDES=[
-{id:"guest",label:"Invited Guest",groups:[{id:"ig",label:"Invited Guest",tables:T(16,27)}]}];   // Table 16 to Table 27, 10 seats each (120 seats)
+{id:"guest",label:"Invited Guest",groups:[{id:"ig",label:"Invited Guest",tables:TABLES}]}];
 export const findGroup=id=>{for(const s of SIDES)for(const g of s.groups)if(g.id===id)return{side:s,group:g}};

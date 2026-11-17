@@ -24,6 +24,8 @@
     .seat{width:34px;height:34px;border-radius:50%;border:2px solid var(--rose);background:var(--white);color:var(--ink);cursor:pointer;font:inherit;font-size:.8rem}
     .seat.sel{background:var(--rose);color:#fff}
     .seat:disabled{background:var(--line-strong);border-color:var(--line-strong);color:var(--muted);cursor:not-allowed}
+    .seat-lock{background:var(--blush);border:1px dashed var(--gold);border-radius:10px;padding:.7rem .9rem;margin:0 0 .8rem;font-size:.92rem}
+    .locked .tables{opacity:.35;filter:grayscale(.6);pointer-events:none;user-select:none}
     .legend{display:flex;gap:1rem;font-size:.85rem;color:var(--muted);margin-bottom:.6rem}
     .bar{position:sticky;bottom:10px;background:var(--white);border:1px solid var(--rose);border-radius:12px;padding:.8rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:.8rem;flex-wrap:wrap}
     .err{color:#c0392b;margin:.6rem 0 0}
@@ -67,9 +69,10 @@
         <p style="margin:0;color:var(--muted);font-size:.9rem">Seats are for invited guests only. A booking made by someone who is not on the guest list will be cancelled.</p>
         <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true"><label>Website<input id="website" tabindex="-1" autocomplete="off"></label></div>
         <label for="name">Full name</label><input id="name" autocomplete="name" maxlength="80">
-        <div class="two"><div><label for="email">Email</label><input id="email" type="email" autocomplete="email"></div>
+        <div class="two"><div><label for="email">Email (required)</label><input id="email" type="email" autocomplete="email" required></div>
         <div><label for="phone">Phone number</label><input id="phone" type="tel" autocomplete="tel" placeholder="080..."></div></div></div>
       <div class="box" id="seatBox" hidden><h2>3. Pick your seat(s)</h2>
+        <p class="seat-lock" id="seatLock"><b>Enter your email address above to unlock seat selection.</b></p>
         <div class="legend"><span>&#9711; Available</span><span>&#9679; Yours (rose)</span><span>&#9679; Taken (grey)</span></div>
         <div class="tables" id="tables"></div></div>
       <div class="bar" id="bar" hidden><span id="sum"></span><button class="btn btn-primary" id="go" disabled>Confirm &amp; get my access card</button></div>
