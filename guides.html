@@ -9,7 +9,9 @@
   <meta property="og:description" content="Watch a short video on how to book your seat for Tosin &amp; Raphael's wedding." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://artfullytee-tosinraphael.netlify.app/guides.html" />
-  <meta property="og:image" content="https://artfullytee-tosinraphael.netlify.app/videos/book-a-seat.jpg" />
+  <meta property="og:image" content="https://artfullytee-tosinraphael.netlify.app/videos/book-a-seat-share.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,8 +19,11 @@
   <link rel="stylesheet" href="style.css" />
   <style>
     .gwrap{max-width:900px;margin:0 auto;padding:0 var(--gutter) 5rem}
-    .player{background:#000;border-radius:var(--radius);overflow:hidden;aspect-ratio:16/9;position:relative}
-    .player video,.player iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+    .stage{display:flex;justify-content:center;background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:clamp(.8rem,3vw,1.6rem)}
+    .player{--ar:1.7778;position:relative;background:#000;border-radius:16px;overflow:hidden;aspect-ratio:var(--ar);width:100%;max-width:100%;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+    /* Tall (phone) videos: size by height so they never get taller than the screen, and stay centred */
+    .player.portrait{width:calc(min(76vh, 720px) * var(--ar))}
+    .player video,.player iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;object-fit:contain}
     .player .soon{position:absolute;inset:0;display:grid;place-items:center;color:#fff;text-align:center;padding:1rem}
     .gtitle{margin:1.2rem 0 .2rem}
     .gdesc{color:var(--muted);margin:0 0 1rem}
@@ -32,7 +37,7 @@
     .vlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem}
     .vcard{display:block;text-align:left;background:var(--white);border:1px solid var(--line);border-radius:12px;overflow:hidden;color:var(--ink);cursor:pointer;font:inherit;padding:0}
     .vcard.on{border-color:var(--rose);box-shadow:0 0 0 2px var(--rose) inset}
-    .vcard .th{aspect-ratio:16/9;background:var(--blush) center/cover no-repeat;display:grid;place-items:center;font-size:2rem;color:var(--rose-dark)}
+    .vcard .th{aspect-ratio:16/9;background:#000 center/contain no-repeat;display:grid;place-items:center;font-size:2rem;color:var(--rose-dark)}
     .vcard .tx{padding:.7rem .9rem}.vcard b{display:block}.vcard small{color:var(--muted)}
     .new{display:inline-block;margin-left:.4rem;padding:.05rem .5rem;border-radius:99px;background:var(--rose);color:#fff;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle}
   </style>
@@ -54,7 +59,7 @@
     </section>
 
     <div class="gwrap">
-      <div class="player" id="player"><div class="soon">Loading video...</div></div>
+      <div class="stage"><div class="player" id="player"><div class="soon">Loading video...</div></div></div>
       <h2 class="gtitle" id="gTitle"></h2>
       <p class="gdesc" id="gDesc"></p>
 
@@ -88,11 +93,14 @@
     const msgFor = (v) => "Hello! Please watch this short video on how to book your seat for Tosin & Raphael's wedding: " + linkFor(v);
 
     function play(v, push) {
+      const setShape = (ar) => { if (!(ar > 0)) return; $("player").style.setProperty("--ar", ar); $("player").classList.toggle("portrait", ar < 1); };
+      setShape(v.aspect || (v.youtube ? 16 / 9 : 0) || 16 / 9);
       $("player").innerHTML = v.youtube
         ? `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.youtube)}?rel=0" title="${esc(v.title)}" allow="fullscreen; picture-in-picture" allowfullscreen></iframe>`
         : `<video controls playsinline preload="metadata" ${v.poster ? `poster="${esc(v.poster)}"` : ""}><source src="${esc(v.src)}" type="video/mp4"></video>`;
       const vid = $("player").querySelector("video");
-      if (vid) vid.querySelector("source").addEventListener("error", () => { $("player").innerHTML = '<div class="soon">This video is not available yet. Please check back soon.</div>'; });
+      if (vid) vid.addEventListener("loadedmetadata", () => setShape(vid.videoWidth / vid.videoHeight));
+      if (vid) vid.querySelector("source").addEventListener("error", () => { $("player").innerHTML = '<div class="soon"><div>The video could not be loaded.<br><a class="text-link" style="color:#fff" href="' + esc(v.src) + '">Tap here to open the video directly</a></div></div>'; });
       $("gTitle").textContent = v.title; $("gDesc").textContent = v.description || "";
       document.title = v.title + " | The Art of Forever";
       $("share").hidden = false; $("gLink").value = linkFor(v); $("copied").textContent = "";
