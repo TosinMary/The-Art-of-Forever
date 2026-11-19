@@ -411,3 +411,16 @@ window.showMyRefChip();
   window.addEventListener("focus", recheck);
   setInterval(() => { if (!document.hidden) recheck(); }, 60 * 1000);
 })();
+
+
+/* ---------- "How-to" menu link (added to every page automatically) ---------- */
+(function () {
+  const ul = document.querySelector("#nav ul");
+  if (!ul || ul.querySelector('a[href="guides.html"]')) return;
+  const li = document.createElement("li"), a = document.createElement("a");
+  a.href = "guides.html"; a.textContent = "How-to";
+  if (document.body.getAttribute("data-page") === "guides.html") a.className = "active";
+  li.appendChild(a);
+  const gift = ul.querySelector(".nav-gift");
+  ul.insertBefore(li, gift ? gift.closest("li") : null);
+})();

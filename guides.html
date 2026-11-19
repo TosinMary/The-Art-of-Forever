@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How-to Videos | The Art of Forever</title>
+  <meta name="description" content="Short videos showing how to book your seat and use the Art of Forever wedding website." />
+  <meta property="og:title" content="How to book your seat | ArtFullyTee" />
+  <meta property="og:description" content="Watch a short video on how to book your seat for Tosin &amp; Raphael's wedding." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://artfullytee-tosinraphael.netlify.app/guides.html" />
+  <meta property="og:image" content="https://artfullytee-tosinraphael.netlify.app/videos/book-a-seat.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .gwrap{max-width:900px;margin:0 auto;padding:0 var(--gutter) 5rem}
+    .player{background:#000;border-radius:var(--radius);overflow:hidden;aspect-ratio:16/9;position:relative}
+    .player video,.player iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+    .player .soon{position:absolute;inset:0;display:grid;place-items:center;color:#fff;text-align:center;padding:1rem}
+    .gtitle{margin:1.2rem 0 .2rem}
+    .gdesc{color:var(--muted);margin:0 0 1rem}
+    .share{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.1rem;margin-bottom:2rem}
+    .share h3{margin:0 0 .6rem;font-family:var(--font-display);font-size:1.3rem;font-weight:500}
+    .share .row{display:flex;gap:.5rem;flex-wrap:wrap}
+    .share input{flex:1;min-width:200px;padding:.7rem .9rem;font:inherit;font-size:16px;background:var(--ivory);border:1px solid var(--line-strong);color:var(--ink);border-radius:10px}
+    .share .actions{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.7rem}
+    .share .ok{color:#1f8a55;margin:.5rem 0 0;min-height:1.1em;font-size:.92rem}
+    .vlist-h{font-family:var(--font-display);font-size:1.6rem;font-weight:500;margin:0 0 .8rem}
+    .vlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem}
+    .vcard{display:block;text-align:left;background:var(--white);border:1px solid var(--line);border-radius:12px;overflow:hidden;color:var(--ink);cursor:pointer;font:inherit;padding:0}
+    .vcard.on{border-color:var(--rose);box-shadow:0 0 0 2px var(--rose) inset}
+    .vcard .th{aspect-ratio:16/9;background:var(--blush) center/cover no-repeat;display:grid;place-items:center;font-size:2rem;color:var(--rose-dark)}
+    .vcard .tx{padding:.7rem .9rem}.vcard b{display:block}.vcard small{color:var(--muted)}
+    .new{display:inline-block;margin-left:.4rem;padding:.05rem .5rem;border-radius:99px;background:var(--rose);color:#fff;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle}
+  </style>
+</head>
+<body data-page="guides.html">
+  <header class="site-header" id="top">
+    <a href="index.html" class="brand">The Art of Forever</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span></button>
+    <nav id="nav" class="nav"><ul>
+      <li><a href="index.html">Home</a></li><li><a href="story.html">Our Story</a></li><li><a href="gallery.html">Gallery</a></li>
+      <li><a href="rsvp.html">RSVP</a></li><li><a href="program.html">Program</a></li><li><a href="location.html">Location</a></li>
+      <li><a href="gift.html" class="nav-gift">Gift the Couple</a></li></ul></nav>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <p class="hashtag">#ArtFullyTee</p><h1>How-to Videos</h1>
+      <p class="lead">Short videos that show you how to use this website, step by step.</p>
+    </section>
+
+    <div class="gwrap">
+      <div class="player" id="player"><div class="soon">Loading video...</div></div>
+      <h2 class="gtitle" id="gTitle"></h2>
+      <p class="gdesc" id="gDesc"></p>
+
+      <div class="share" id="share" hidden>
+        <h3>Share this video</h3>
+        <div class="row"><input id="gLink" readonly aria-label="Video link"><button class="btn btn-outline" id="copyLink" type="button">Copy link</button></div>
+        <div class="actions">
+          <a class="btn btn-primary" id="waBtn" href="#" target="_blank" rel="noopener">Send on WhatsApp</a>
+          <button class="btn btn-outline" id="copyMsg" type="button">Copy WhatsApp message</button>
+        </div>
+        <p class="ok" id="copied" role="status"></p>
+      </div>
+
+      <h2 class="vlist-h" id="listH" hidden>All videos</h2>
+      <div class="vlist" id="vlist"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer"><p class="footer-names">Tosin &amp; Raphael</p><p>#ArtFullyTee &middot; With love, forever</p><p class="copyright">&copy; 2026 The Art of Forever</p></footer>
+  <script src="pages.js"></script>
+  <script>
+  (async () => {
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    let videos = [];
+    try { videos = (await (await fetch("guides.json", { cache: "no-cache" })).json()).videos || []; } catch (e) {}
+    if (!videos.length) { $("player").innerHTML = '<div class="soon">Videos are coming soon. Please check back.</div>'; return; }
+
+    const isNew = (v) => v.added && (Date.now() - new Date(v.added).getTime()) < 14 * 864e5;
+    const linkFor = (v) => location.origin + "/guide/" + encodeURIComponent(v.id);
+    const msgFor = (v) => "Hello! Please watch this short video on how to book your seat for Tosin & Raphael's wedding: " + linkFor(v);
+
+    function play(v, push) {
+      $("player").innerHTML = v.youtube
+        ? `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.youtube)}?rel=0" title="${esc(v.title)}" allow="fullscreen; picture-in-picture" allowfullscreen></iframe>`
+        : `<video controls playsinline preload="metadata" ${v.poster ? `poster="${esc(v.poster)}"` : ""}><source src="${esc(v.src)}" type="video/mp4"></video>`;
+      const vid = $("player").querySelector("video");
+      if (vid) vid.querySelector("source").addEventListener("error", () => { $("player").innerHTML = '<div class="soon">This video is not available yet. Please check back soon.</div>'; });
+      $("gTitle").textContent = v.title; $("gDesc").textContent = v.description || "";
+      document.title = v.title + " | The Art of Forever";
+      $("share").hidden = false; $("gLink").value = linkFor(v); $("copied").textContent = "";
+      $("waBtn").href = "https://wa.me/?text=" + encodeURIComponent(msgFor(v));
+      $("copyLink").onclick = () => copy(linkFor(v), "Link copied.");
+      $("copyMsg").onclick = () => copy(msgFor(v), "Message copied. Paste it into WhatsApp.");
+      document.querySelectorAll(".vcard").forEach((c) => c.classList.toggle("on", c.dataset.id === v.id));
+      if (push) { history.replaceState(null, "", "guides.html?v=" + encodeURIComponent(v.id)); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    }
+    async function copy(text, ok) {
+      try { await navigator.clipboard.writeText(text); $("copied").textContent = ok; }
+      catch (e) { $("gLink").select(); $("copied").textContent = "Press and hold the link to copy it."; }
+    }
+
+    $("listH").hidden = videos.length < 2;
+    $("vlist").innerHTML = videos.map((v) =>
+      `<button type="button" class="vcard" data-id="${esc(v.id)}"><div class="th" ${v.poster ? `style="background-image:url('${esc(v.poster)}')"` : ""}>${v.poster ? "" : "&#9654;"}</div>` +
+      `<div class="tx"><b>${esc(v.title)}${isNew(v) ? '<span class="new">New</span>' : ""}</b><small>${esc(v.duration || "")}</small></div></button>`).join("");
+    $("vlist").onclick = (e) => { const b = e.target.closest(".vcard"); if (b) play(videos.find((v) => v.id === b.dataset.id), true); };
+
+    const want = new URLSearchParams(location.search).get("v");
+    play(videos.find((v) => v.id === want) || videos[0], false);
+  })();
+  </script>
+</body>
+</html>

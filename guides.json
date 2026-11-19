@@ -1,0 +1,13 @@
+{
+  "videos": [
+    {
+      "id": "book-a-seat",
+      "title": "How to book your seat",
+      "description": "A short walkthrough of the RSVP page: enter your details, pick your seat and get your access card by email.",
+      "src": "videos/book-a-seat.mp4",
+      "poster": "videos/book-a-seat.jpg",
+      "duration": "1 min",
+      "added": "2026-11-19"
+    }
+  ]
+}

@@ -14,7 +14,7 @@
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(self), microphone=(), geolocation=(), payment=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-src https://www.google.com https://maps.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-src https://www.google.com https://maps.google.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
 # Keep the private pages out of search engines and out of caches
 [[headers]]
@@ -28,6 +28,25 @@
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
     Cache-Control = "no-store"
+
+# ---------- How-to videos ----------
+# Short, shareable links:  /guide/book-a-seat  ->  guides.html?v=book-a-seat
+[[redirects]]
+  from = "/guide/:id"
+  to = "/guides.html?v=:id"
+  status = 302
+[[redirects]]
+  from = "/guide"
+  to = "/guides.html"
+  status = 302
+[[headers]]
+  for = "/guides.json"
+  [headers.values]
+    Cache-Control = "no-cache"
+[[headers]]
+  for = "/videos/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
 
 # ---------- Never serve project files that are not part of the website ----------
 [[redirects]]
